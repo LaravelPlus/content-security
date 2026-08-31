@@ -27,6 +27,7 @@
     <php>
         <env name="APP_KEY" value="base64:2fl+Ktg9DHDzIZ8YKKm1lMPtJXjTeJRqVLDvXRC4RCg="/>
         <env name="DB_CONNECTION" value="testing"/>
-        <env name="CONTENT_SECURITY_MALWARE_DRIVER" value="null"/>
+        <!-- `none`, not `null`: env() casts the string "null" to PHP null. -->
+        <env name="CONTENT_SECURITY_MALWARE_DRIVER" value="none"/>
     </php>
 </phpunit>

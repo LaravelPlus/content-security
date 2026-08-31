@@ -190,7 +190,7 @@ it('accepts a legitimate policy override', function (): void {
 
 it('does not report an idle driver as a missing engine', function (): void {
     ContentSecurity::auth(fn (): bool => true);
-    config()->set('content-security.malware.default', 'null');
+    config()->set('content-security.malware.default', 'none');
 
     $response = $this->actingAs(consoleUser())
         ->getJson('/admin/content-security')
@@ -200,9 +200,9 @@ it('does not report an idle driver as a missing engine', function (): void {
 
     // The active driver IS null here, so nothing is scanned for malware —
     // that is a real finding, and it should surface as one.
-    expect($scanners->firstWhere('scanner', 'null')['active'])->toBeTrue()
-        ->and($scanners->firstWhere('scanner', 'null')['is_problem'])->toBeTrue()
-        ->and($scanners->firstWhere('scanner', 'null')['status'])->toBe('unconfigured')
+    expect($scanners->firstWhere('scanner', 'none')['active'])->toBeTrue()
+        ->and($scanners->firstWhere('scanner', 'none')['is_problem'])->toBeTrue()
+        ->and($scanners->firstWhere('scanner', 'none')['status'])->toBe('unconfigured')
         ->and($response->json('posture.headline'))->toBe('No malware engine');
 });
 
@@ -218,7 +218,7 @@ it('does not flag an idle driver when a real engine is active', function (): voi
         ->assertOk();
 
     $scanners = collect($response->json('health'));
-    $idle = $scanners->firstWhere('scanner', 'null');
+    $idle = $scanners->firstWhere('scanner', 'none');
 
     // ...but with a healthy engine active, the idle null driver must not
     // read as an outage, and must not drag the posture down.

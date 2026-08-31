@@ -31,10 +31,10 @@ runtime policy editing).
 In local and CI, run without ClamAV:
 
 ```dotenv
-CONTENT_SECURITY_MALWARE_DRIVER=null
+CONTENT_SECURITY_MALWARE_DRIVER=none
 ```
 
-The null driver reports every file as **skipped**, never as clean — so a
+The `none` driver reports every file as **skipped**, never as clean — so a
 development machine cannot tell itself its uploads were checked. Everything
 else in the pipeline (extension, MIME, magic bytes, archives, images, PDFs)
 still runs, and that is most of the value.

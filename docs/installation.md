@@ -39,9 +39,15 @@ CONTENT_SECURITY_ADMIN_PREFIX=admin/content-security
 CONTENT_SECURITY_REPORT_TO=security@example.com
 ```
 
-Use the `null` driver in local and CI. It reports every file as *skipped*,
+Use the `none` driver in local and CI. It reports every file as *skipped*,
 never as clean — a machine without an engine must not be able to tell itself
 its uploads were scanned.
+
+> The driver is `none`, not `null`. Laravel's `env()` casts the string
+> `"null"` to PHP null, so `CONTENT_SECURITY_MALWARE_DRIVER=null` left the
+> package with no driver at all and failed every scan closed — "disable
+> scanning" quietly became "reject every upload". `null` is still accepted as
+> an alias, and an unset or empty value now resolves to `none` too.
 
 ## Verify
 

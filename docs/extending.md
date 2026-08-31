@@ -127,7 +127,7 @@ Every one is bound to a contract:
 
 | Contract | Default |
 | --- | --- |
-| `MalwareScanner` | `ClamAvScanner` / `NullMalwareScanner` |
+| `MalwareScanner` | `ClamAvScanner` / `NullMalwareScanner` (`none`) |
 | `Sanitizer` | `HtmlSanitizer` (symfony/html-sanitizer) |
 | `ArchiveInspector` | `ArchiveInspector` |
 | `ImageInspector` | `ImageInspector` |

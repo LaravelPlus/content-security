@@ -162,3 +162,21 @@ it('still rejects a polyglot image with PHP appended', function (): void {
     // only reads the header.
     expect(ContentSecurity::scanFile($file, 'images')->isClean())->toBeFalse();
 });
+
+it('treats an unset or null-ish malware driver as no engine, not as broken config', function (?string $configured): void {
+    // env() casts the STRING "null" to PHP null, so a .env line reading
+    // CONTENT_SECURITY_MALWARE_DRIVER=null arrives here as null. That used to
+    // resolve to no driver at all, throw, and fail every scan closed — i.e.
+    // "disable scanning" quietly became "reject every upload".
+    config()->set('content-security.malware.default', $configured);
+
+    $result = ContentSecurity::scanFile(textFile('notes.txt', 'ordinary'));
+
+    expect($result->isClean())->toBeTrue()
+        ->and($result->failed())->toBeFalse();
+})->with([
+    'null value' => [null],
+    'empty string' => [''],
+    'none' => ['none'],
+    'legacy null alias' => ['null'],
+]);

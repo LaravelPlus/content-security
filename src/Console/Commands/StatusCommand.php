@@ -86,8 +86,8 @@ final class StatusCommand extends Command
             $warnings++;
         }
 
-        if (config('content-security.malware.default') === 'null') {
-            $this->components->warn('The null malware driver is active. No signature scanning is happening.');
+        if (in_array(config('content-security.malware.default'), ['none', 'null', '', null], true)) {
+            $this->components->warn('No malware engine is active. Files are checked structurally, but nothing is scanned for known malware.');
             $warnings++;
         }
 

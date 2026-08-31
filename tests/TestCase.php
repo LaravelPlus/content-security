@@ -48,7 +48,7 @@ abstract class TestCase extends Orchestra
         // No real engine in the unit suite: the tests that care about
         // malware use FakeMalwareScanner, and the rest must not depend on
         // whether the machine happens to have clamd installed.
-        $app['config']->set('content-security.malware.default', 'null');
+        $app['config']->set('content-security.malware.default', 'none');
         $app['config']->set('filesystems.disks.quarantine', [
             'driver' => 'local',
             'root' => storage_path('framework/testing/quarantine'),

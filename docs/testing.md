@@ -12,7 +12,7 @@ ContentSecurity::extend('clamav', fn () => FakeMalwareScanner::clean());
 config()->set('content-security.malware.default', 'clamav');
 ```
 
-Or set `CONTENT_SECURITY_MALWARE_DRIVER=null` in `phpunit.xml`. The null driver
+Or set `CONTENT_SECURITY_MALWARE_DRIVER=none` in `phpunit.xml`. The null driver
 reports *skipped*, never clean.
 
 ## A fake engine

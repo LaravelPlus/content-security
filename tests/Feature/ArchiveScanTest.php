@@ -25,7 +25,7 @@ function threatNames(ScanResult $result): array
 }
 
 beforeEach(function (): void {
-    config()->set('content-security.malware.default', 'null');
+    config()->set('content-security.malware.default', 'none');
 });
 
 it('passes an ordinary archive', function (): void {

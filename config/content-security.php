@@ -227,7 +227,16 @@ return [
 
     'malware' => [
 
-        'default' => env('CONTENT_SECURITY_MALWARE_DRIVER', 'clamav'),
+        /*
+        | `?: 'none'` is load-bearing. Laravel's env() casts the STRING "null"
+        | to PHP null, so CONTENT_SECURITY_MALWARE_DRIVER=null — the obvious
+        | way to ask for no engine — resolved to null, not to the driver
+        | named "null". The manager then had no driver at all and every scan
+        | failed closed, which on an upload endpoint means every upload
+        | rejected. The driver is therefore called `none`; `null` still
+        | works as an alias for anyone who already wrote it.
+        */
+        'default' => env('CONTENT_SECURITY_MALWARE_DRIVER', 'clamav') ?: 'none',
 
         'drivers' => [
 
@@ -246,8 +255,8 @@ return [
                 'cli_binary' => env('CONTENT_SECURITY_CLAMAV_BINARY', 'clamscan'),
             ],
 
-            'null' => [
-                'driver' => 'null',
+            'none' => [
+                'driver' => 'none',
             ],
         ],
     ],
