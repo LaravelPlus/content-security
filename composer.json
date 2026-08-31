@@ -61,10 +61,11 @@
         }
     },
     "scripts": {
-        "test": "pest",
+        "test": "pest --testsuite=Unit,Feature",
         "analyse": "phpstan analyse",
         "lint": "pint --parallel",
-        "lint:check": "pint --parallel --test"
+        "lint:check": "pint --parallel --test",
+        "test:integration": "pest --testsuite=Integration"
     },
     "config": {
         "sort-packages": true,

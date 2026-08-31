@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Support\Facades\Storage;
+use LaravelPlus\ContentSecurity\Contracts\MalwareScanner;
 use LaravelPlus\ContentSecurity\Contracts\PolicyRepository;
 use LaravelPlus\ContentSecurity\Facades\ContentSecurity;
 use LaravelPlus\ContentSecurity\Models\SecurityScan;
+use LaravelPlus\ContentSecurity\Tests\Support\FakeMalwareScanner;
 
 final class ConsoleUser extends AuthUser
 {
@@ -184,4 +186,44 @@ it('accepts a legitimate policy override', function (): void {
 
     expect(app(PolicyRepository::class)->file('default')->maxSize)
         ->toBe(5 * 1024 * 1024);
+});
+
+it('does not report an idle driver as a missing engine', function (): void {
+    ContentSecurity::auth(fn (): bool => true);
+    config()->set('content-security.malware.default', 'null');
+
+    $response = $this->actingAs(consoleUser())
+        ->getJson('/admin/content-security')
+        ->assertOk();
+
+    $scanners = collect($response->json('health'));
+
+    // The active driver IS null here, so nothing is scanned for malware —
+    // that is a real finding, and it should surface as one.
+    expect($scanners->firstWhere('scanner', 'null')['active'])->toBeTrue()
+        ->and($scanners->firstWhere('scanner', 'null')['is_problem'])->toBeTrue()
+        ->and($scanners->firstWhere('scanner', 'null')['status'])->toBe('unconfigured')
+        ->and($response->json('posture.headline'))->toBe('No malware engine');
+});
+
+it('does not flag an idle driver when a real engine is active', function (): void {
+    ContentSecurity::auth(fn (): bool => true);
+
+    ContentSecurity::extend('clamav', fn (): MalwareScanner => FakeMalwareScanner::clean());
+    config()->set('content-security.malware.default', 'clamav');
+    config()->set('content-security.malware.drivers.clamav', ['driver' => 'clamav']);
+
+    $response = $this->actingAs(consoleUser())
+        ->getJson('/admin/content-security')
+        ->assertOk();
+
+    $scanners = collect($response->json('health'));
+    $idle = $scanners->firstWhere('scanner', 'null');
+
+    // ...but with a healthy engine active, the idle null driver must not
+    // read as an outage, and must not drag the posture down.
+    expect($idle['active'])->toBeFalse()
+        ->and($idle['is_problem'])->toBeFalse()
+        ->and($idle['status'])->toBe('inactive')
+        ->and($response->json('posture.state'))->not->toBe('critical');
 });

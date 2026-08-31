@@ -213,10 +213,13 @@ final class ContentSecurity implements FileScanner, TextScanner
      */
     public function health(): array
     {
+        $active = $this->scanners->defaultDriver();
         $health = [];
 
         foreach ($this->scanners->configuredDrivers() as $driver) {
-            $health[] = $this->scanners->driver($driver)->health();
+            $health[] = $this->scanners->driver($driver)
+                ->health()
+                ->asActive($driver === $active);
         }
 
         return $health;

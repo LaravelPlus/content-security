@@ -3,8 +3,14 @@
 declare(strict_types=1);
 
 return [
-    'rejected' => 'Ta :subject ni prestal varnostnega preverjanja.',
-    'scan_failed' => 'Varnostnega preverjanja ni bilo mogoče dokončati. Poskusite znova.',
+    'rejected_file' => 'Ta datoteka ni prestala varnostnega preverjanja.',
+    'rejected_text' => 'To besedilo ni prestalo varnostnega preverjanja.',
+    'rejected_content' => 'Ta vsebina ni prestala varnostnega preverjanja.',
+
+    'failed_file' => 'Varnostnega preverjanja datoteke ni bilo mogoče dokončati. Poskusite znova.',
+    'failed_text' => 'Varnostnega preverjanja besedila ni bilo mogoče dokončati. Poskusite znova.',
+    'failed_content' => 'Varnostnega preverjanja vsebine ni bilo mogoče dokončati. Poskusite znova.',
+
     'upload_failed' => 'Nalaganje se ni dokončalo. Poskusite znova.',
     'malware_detected' => 'Ta datoteka ni prestala varnostnega preverjanja.',
 

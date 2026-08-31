@@ -62,8 +62,18 @@ abstract class AbstractFileCheck implements FileCheck
             return CheckResult::passed($this->key(), $findings->metadata);
         }
 
-        return $findings->hasAtLeast(static::BLOCKING_LEVEL)
-            ? CheckResult::infected($this->key(), $findings->threats, $findings->metadata)
-            : CheckResult::suspicious($this->key(), $findings->threats, $findings->metadata);
+        if ($findings->hasAtLeast(static::BLOCKING_LEVEL)) {
+            return CheckResult::infected($this->key(), $findings->threats, $findings->metadata);
+        }
+
+        // Info is an observation, not a verdict. Without this, a browser
+        // sending `application/octet-stream` for an ordinary PNG — which is
+        // routine — produced a Suspicious scan and every such upload was
+        // rejected. The finding is still recorded; it just does not decide.
+        if (! $findings->hasAtLeast(ThreatLevel::Low)) {
+            return CheckResult::informational($this->key(), $findings->threats, $findings->metadata);
+        }
+
+        return CheckResult::suspicious($this->key(), $findings->threats, $findings->metadata);
     }
 }

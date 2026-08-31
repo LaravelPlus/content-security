@@ -64,9 +64,14 @@ export interface Scan {
 
 export interface ScannerHealth {
     scanner: string;
-    status: 'online' | 'offline' | 'disabled';
+    /** `unconfigured` means the ACTIVE driver cannot scan; `inactive` is an idle driver. */
+    status: 'online' | 'offline' | 'disabled' | 'inactive' | 'unconfigured';
     online: boolean;
     enabled: boolean;
+    /** The driver the application actually scans with. */
+    active: boolean;
+    /** Only true when the active engine cannot scan. */
+    is_problem: boolean;
     version: string | null;
     signature_version: string | null;
     signatures_updated_at: string | null;

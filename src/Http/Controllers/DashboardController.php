@@ -74,7 +74,24 @@ final class DashboardController extends Controller
     private function posture(array $statistics, array $health): array
     {
         foreach ($health as $scanner) {
-            if ($scanner->enabled && ! $scanner->online) {
+            // Only the active engine matters. Every configured driver is
+            // listed, and an idle one is not an outage.
+            if (! $scanner->active) {
+                continue;
+            }
+
+            if (! $scanner->enabled) {
+                // The active driver is `null`: nothing is scanned for
+                // malware at all. Previously invisible here, because a
+                // disabled driver was skipped along with the idle ones.
+                return [
+                    'state' => 'warning',
+                    'headline' => 'No malware engine',
+                    'detail' => 'Files are checked structurally, but nothing is scanned for known malware.',
+                ];
+            }
+
+            if (! $scanner->online) {
                 return [
                     'state' => 'critical',
                     'headline' => 'Scanner offline',

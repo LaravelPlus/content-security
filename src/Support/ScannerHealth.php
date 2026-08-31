@@ -25,8 +25,31 @@ final readonly class ScannerHealth
         public ?string $connection = null,
         public ?string $error = null,
         public bool $enabled = true,
+        /**
+         * Whether this is the driver the application actually scans with.
+         * Every configured driver is reported, so without this an idle
+         * `null` entry reads exactly like a missing engine.
+         */
+        public bool $active = false,
         public array $details = [],
     ) {}
+
+    public function asActive(bool $active = true): self
+    {
+        return new self(
+            scanner: $this->scanner,
+            online: $this->online,
+            version: $this->version,
+            signatureVersion: $this->signatureVersion,
+            signaturesUpdatedAt: $this->signaturesUpdatedAt,
+            pingMs: $this->pingMs,
+            connection: $this->connection,
+            error: $this->error,
+            enabled: $this->enabled,
+            active: $active,
+            details: $this->details,
+        );
+    }
 
     public static function offline(string $scanner, string $error, ?string $connection = null): self
     {
@@ -51,10 +74,20 @@ final readonly class ScannerHealth
     public function status(): string
     {
         return match (true) {
-            ! $this->enabled => 'disabled',
+            ! $this->enabled => $this->active ? 'unconfigured' : 'inactive',
             $this->online => 'online',
             default => 'offline',
         };
+    }
+
+    /**
+     * True only when the engine the application scans with cannot scan.
+     * An idle driver sitting in config is not a problem; the active one
+     * being absent or unreachable is.
+     */
+    public function isProblem(): bool
+    {
+        return $this->active && ! $this->online;
     }
 
     /**
@@ -67,6 +100,8 @@ final readonly class ScannerHealth
             'status' => $this->status(),
             'online' => $this->online,
             'enabled' => $this->enabled,
+            'active' => $this->active,
+            'is_problem' => $this->isProblem(),
             'version' => $this->version,
             'signature_version' => $this->signatureVersion,
             'signatures_updated_at' => $this->signaturesUpdatedAt?->format(DATE_ATOM),

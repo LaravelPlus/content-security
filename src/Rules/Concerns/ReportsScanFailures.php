@@ -20,10 +20,16 @@ use LaravelPlus\ContentSecurity\Domain\Scan\ScanResult;
  */
 trait ReportsScanFailures
 {
+    /**
+     * @param  'file'|'text'|'content'  $subject
+     */
     protected function messageFor(ScanResult $result, string $subject = 'file'): string
     {
-        return $result->failed()
-            ? (string) __('content-security::validation.scan_failed', ['subject' => $subject])
-            : (string) __('content-security::validation.rejected', ['subject' => $subject]);
+        // A key per subject, not a :subject placeholder. Interpolating an
+        // English noun into a translated sentence produced "Ta file ni
+        // prestal ..." in Slovenian — grammatically wrong and half-English.
+        $key = $result->failed() ? 'failed' : 'rejected';
+
+        return (string) __("content-security::validation.{$key}_{$subject}");
     }
 }

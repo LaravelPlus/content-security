@@ -47,6 +47,22 @@ final readonly class CheckResult
     }
 
     /**
+     * Passed, but with something worth recording.
+     *
+     * Info-level findings are observations, not verdicts — the classic being
+     * a browser that declares `application/octet-stream` for a perfectly
+     * ordinary PNG. They belong in the audit trail and on the threats page;
+     * they must never reject a user's upload.
+     *
+     * @param  list<Threat>|Threat  $threats
+     * @param  array<string, scalar|array<mixed>|null>  $metadata
+     */
+    public static function informational(string $check, array|Threat $threats, array $metadata = []): self
+    {
+        return new self($check, ScanStatus::Clean, is_array($threats) ? $threats : [$threats], $metadata);
+    }
+
+    /**
      * @param  list<Threat>|Threat  $threats
      * @param  array<string, scalar|array<mixed>|null>  $metadata
      */

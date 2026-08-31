@@ -126,3 +126,39 @@ it('scans an uploaded file', function (): void {
 
     expect($result->scanId())->not->toBeNull();
 });
+
+it('accepts a genuine image whose browser Content-Type disagrees with its bytes', function (): void {
+    useScanner(FakeMalwareScanner::clean());
+
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    $path = textFile('avatar.png', $png);
+
+    // Exactly what a real upload looks like when the browser declares
+    // application/octet-stream: the declared type disagrees with the sniffed
+    // one. That is routine, it is recorded as Info, and it must not reject
+    // the upload — this used to fail every such avatar.
+    $file = new UploadedFile($path, 'avatar.png', null, null, true);
+
+    $result = ContentSecurity::scanFile($file, 'images');
+
+    expect($result->isClean())->toBeTrue()
+        ->and($result->status())->toBe(ScanStatus::Clean);
+
+    $names = array_map(fn ($threat) => $threat->name, $result->threats());
+
+    // Recorded, not acted on.
+    expect($names)->toContain('file.declared_mime_mismatch');
+});
+
+it('still rejects a polyglot image with PHP appended', function (): void {
+    useScanner(FakeMalwareScanner::clean());
+
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    $path = textFile('avatar.png', $png."\n<?php system(\$_GET['c']); ?>");
+
+    $file = new UploadedFile($path, 'avatar.png', null, null, true);
+
+    // Laravel's own `image` and `mimes` rules pass this — getimagesize()
+    // only reads the header.
+    expect(ContentSecurity::scanFile($file, 'images')->isClean())->toBeFalse();
+});

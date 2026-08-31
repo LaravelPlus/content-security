@@ -3,9 +3,17 @@
 declare(strict_types=1);
 
 return [
-    // Deliberately non-specific: see Rules\Concerns\ReportsScanFailures.
-    'rejected' => 'This :subject did not pass a security check.',
-    'scan_failed' => 'This :subject could not be security checked. Please try again.',
+    // Deliberately non-specific about WHY: see Rules\Concerns\ReportsScanFailures.
+    // One key per subject rather than a :subject placeholder — interpolating an
+    // English noun into a translated sentence produced "Ta file ni prestal ...".
+    'rejected_file' => 'This file did not pass a security check.',
+    'rejected_text' => 'This text did not pass a security check.',
+    'rejected_content' => 'This content did not pass a security check.',
+
+    'failed_file' => 'This file could not be security checked. Please try again.',
+    'failed_text' => 'This text could not be security checked. Please try again.',
+    'failed_content' => 'This content could not be security checked. Please try again.',
+
     'upload_failed' => 'The upload did not complete. Please try again.',
     'malware_detected' => 'This file did not pass a security check.',
 
