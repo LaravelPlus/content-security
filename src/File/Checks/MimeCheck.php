@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\File\Checks;
 
-use LaravelPlus\ContentSecurity\Contracts\FileCheck;
 use LaravelPlus\ContentSecurity\Domain\File\FileReference;
 use LaravelPlus\ContentSecurity\Domain\Policy\FilePolicy;
-use LaravelPlus\ContentSecurity\Domain\Scan\CheckResult;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanContext;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
+use LaravelPlus\ContentSecurity\Exceptions\InvalidFileException;
 use LaravelPlus\ContentSecurity\Support\MimeTypes;
 
 /**
- * Compares three claims about what the file is — the extension, the browser's
- * Content-Type, and what libmagic reads out of the bytes. Only the last one
- * is evidence; the first two are recorded so a mismatch is visible.
+ * Compares three claims about what the file is — its extension, the
+ * browser's Content-Type, and what libmagic reads out of the bytes. Only the
+ * last is evidence; the first two are recorded so a mismatch is visible.
  */
-final class MimeCheck implements FileCheck
+final class MimeCheck extends AbstractFileCheck
 {
     public function __construct(private readonly MimeTypes $mimeTypes) {}
 
@@ -32,12 +32,7 @@ final class MimeCheck implements FileCheck
         return 'MIME type';
     }
 
-    public function appliesTo(FileReference $file, FilePolicy $policy): bool
-    {
-        return true;
-    }
-
-    public function check(FileReference $file, FilePolicy $policy, ScanContext $context): CheckResult
+    protected function inspect(FileReference $file, FilePolicy $policy, ScanContext $context): Findings
     {
         $detected = $this->mimeTypes->detect($file);
 
@@ -48,7 +43,10 @@ final class MimeCheck implements FileCheck
         ];
 
         if ($detected === null) {
-            return CheckResult::failed($this->key(), 'The file type could not be determined.', $metadata);
+            // Thrown, not returned: the base class turns it into a FAILED
+            // check, which is the fail-closed outcome. "We could not tell
+            // what this is" must never read as a pass.
+            throw InvalidFileException::unreadable($file->originalName);
         }
 
         $threats = [];
@@ -56,7 +54,7 @@ final class MimeCheck implements FileCheck
         if ($policy->hasMimeAllowlist() && ! $policy->allowsMime($detected)) {
             $threats[] = Threat::make(
                 name: 'file.mime_not_allowed',
-                level: ThreatLevel::High,
+                level: ThreatLevel::Medium,
                 source: $this->key(),
                 description: sprintf('Detected type %s is not on the policy allowlist.', $detected),
                 metadata: ['detected_mime' => $detected],
@@ -66,13 +64,11 @@ final class MimeCheck implements FileCheck
         if (! $this->mimeTypes->matchesExtension($file->extension(), $detected)) {
             $threats[] = Threat::make(
                 name: 'file.mime_extension_mismatch',
+                // Deception, not preference: the bytes are one thing and the
+                // name says another.
                 level: ThreatLevel::High,
                 source: $this->key(),
-                description: sprintf(
-                    'The file is a %s but is named .%s.',
-                    $detected,
-                    $file->extension(),
-                ),
+                description: sprintf('The file is a %s but is named .%s.', $detected, $file->extension()),
                 metadata: [
                     'detected_mime' => $detected,
                     'extension' => $file->extension(),
@@ -82,8 +78,8 @@ final class MimeCheck implements FileCheck
         }
 
         if (! $this->mimeTypes->declaredMatchesDetected($file->declaredMime, $detected)) {
-            // Informational: browsers get this wrong on their own, and the
-            // header is attacker-controlled either way.
+            // Informational: browsers get this wrong unprompted, and the
+            // header is uploader-controlled either way.
             $threats[] = Threat::make(
                 name: 'file.declared_mime_mismatch',
                 level: ThreatLevel::Info,
@@ -97,17 +93,6 @@ final class MimeCheck implements FileCheck
             );
         }
 
-        if ($threats === []) {
-            return CheckResult::passed($this->key(), $metadata);
-        }
-
-        $hasBlocking = array_filter(
-            $threats,
-            static fn (Threat $threat): bool => $threat->isAtLeast(ThreatLevel::High),
-        );
-
-        return $hasBlocking !== []
-            ? CheckResult::infected($this->key(), array_values($threats), $metadata)
-            : CheckResult::suspicious($this->key(), array_values($threats), $metadata);
+        return Findings::of($threats, $metadata);
     }
 }

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\File\Archives;
 
+use LaravelPlus\ContentSecurity\Contracts\ArchiveInspector as ArchiveInspectorContract;
 use LaravelPlus\ContentSecurity\Domain\File\FileReference;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
 use PharData;
@@ -20,22 +22,19 @@ use ZipArchive;
  * nested archive is copied to a bounded temp file that is deleted straight
  * after. Guidance for hosts: never extract into the web root either.
  */
-final class ArchiveInspector
+final class ArchiveInspector implements ArchiveInspectorContract
 {
     /** Nested archives above this size are counted, not opened. */
     private const MAX_NESTED_BYTES = 32 * 1024 * 1024;
 
     public function __construct(private readonly ArchiveLimits $limits) {}
 
-    /**
-     * @return array{threats: list<Threat>, metadata: array<string, mixed>}
-     */
-    public function inspect(FileReference $file): array
+    public function inspect(FileReference $file): Findings
     {
         $format = $this->detectFormat($file);
 
         if ($format === null) {
-            return ['threats' => [], 'metadata' => ['archive' => false]];
+            return Findings::none(['archive' => false]);
         }
 
         $state = new ArchiveScanState($this->limits);
@@ -44,21 +43,18 @@ final class ArchiveInspector
             ? $this->inspectZip($file->path, $state, 1, $file->originalName)
             : $this->inspectPhar($file->path, $state, $file->originalName);
 
-        return [
-            'threats' => $threats,
-            'metadata' => [
-                'archive' => true,
-                'format' => $format,
-                'entries' => $state->files,
-                'uncompressed_size' => $state->uncompressedSize,
-                'compressed_size' => $state->compressedSize,
-                'compression_ratio' => $state->ratio(),
-                'max_depth_seen' => $state->deepest,
-            ],
-        ];
+        return Findings::of($threats, [
+            'archive' => true,
+            'format' => $format,
+            'entries' => $state->files,
+            'uncompressed_size' => $state->uncompressedSize,
+            'compressed_size' => $state->compressedSize,
+            'compression_ratio' => $state->ratio(),
+            'max_depth_seen' => $state->deepest,
+        ]);
     }
 
-    public function isArchive(FileReference $file): bool
+    public function handles(FileReference $file): bool
     {
         return $this->detectFormat($file) !== null;
     }

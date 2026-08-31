@@ -3,6 +3,14 @@ includes:
 
 parameters:
     level: 8
+
     paths:
         - src
+
+    # Larastan boots a Testbench application to learn the framework's runtime
+    # shapes. Without this its stub extension has no LARAVEL_VERSION and the
+    # run aborts before analysing anything.
+    bootstrapFiles:
+        - vendor/larastan/larastan/bootstrap.php
+
     treatPhpDocTypesAsCertain: false

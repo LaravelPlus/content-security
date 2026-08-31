@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\File\Pdf;
 
+use LaravelPlus\ContentSecurity\Contracts\PdfInspector as PdfInspectorContract;
 use LaravelPlus\ContentSecurity\Domain\File\FileReference;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
 
@@ -21,7 +23,7 @@ use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
  * behind compression, which is a known limit of any non-rendering inspector
  * — the malware engine is the layer that sees inside them.
  */
-final class PdfInspector
+final class PdfInspector implements PdfInspectorContract
 {
     private const CHUNK = 65_536;
 
@@ -48,28 +50,22 @@ final class PdfInspector
         );
     }
 
-    public function isPdf(FileReference $file): bool
+    public function handles(FileReference $file): bool
     {
         return str_starts_with($file->head(1024), '%PDF-');
     }
 
-    /**
-     * @return array{threats: list<Threat>, metadata: array<string, mixed>}
-     */
-    public function inspect(FileReference $file): array
+    public function inspect(FileReference $file): Findings
     {
         $head = $file->head(1024);
 
         if (! str_starts_with($head, '%PDF-')) {
-            return [
-                'threats' => [Threat::make(
-                    name: 'pdf.malformed',
-                    level: ThreatLevel::Medium,
-                    source: 'pdf',
-                    description: 'The file does not begin with a PDF header.',
-                )],
-                'metadata' => ['valid_header' => false],
-            ];
+            return Findings::of(Threat::make(
+                name: 'pdf.malformed',
+                level: ThreatLevel::Medium,
+                source: 'pdf',
+                description: 'The file does not begin with a PDF header.',
+            ), ['valid_header' => false]);
         }
 
         $markers = $this->countMarkers($file);
@@ -159,7 +155,7 @@ final class PdfInspector
             );
         }
 
-        return ['threats' => $threats, 'metadata' => $metadata];
+        return Findings::of($threats, $metadata);
     }
 
     /**

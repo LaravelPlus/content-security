@@ -105,6 +105,13 @@ return [
         | are formats a misconfigured web server may execute. The allowlist is
         | the real control; this is the seatbelt behind it.
         */
+        /*
+        | A hard ceiling on max_size that a runtime override cannot exceed.
+        | The per-policy max_size is the working limit; this is the bound on
+        | what anyone editing a policy from the console can raise it to.
+        */
+        'max_size_ceiling' => 512 * 1024 * 1024,
+
         'forbidden_extensions' => [
             'php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phps', 'pht', 'phtml', 'phar',
             'cgi', 'pl', 'py', 'rb', 'sh', 'bash', 'zsh',
@@ -346,6 +353,49 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mail reports
+    |--------------------------------------------------------------------------
+    | A daily digest and a weekly roll-up. Both are scheduled automatically
+    | once recipients are set; with none configured the commands exit
+    | quietly, so the schedule is safe to leave registered.
+    |
+    | The daily mail is sent only when there is something to say (findings,
+    | scan failures, or an offline engine). The weekly one always goes out,
+    | so a silent week is confirmed rather than merely assumed.
+    */
+
+    'reports' => [
+
+        // A comma-separated list, or an array.
+        'recipients' => env('CONTENT_SECURITY_REPORT_TO'),
+
+        'timezone' => env('CONTENT_SECURITY_REPORT_TIMEZONE', env('APP_TIMEZONE', 'UTC')),
+
+        'daily' => [
+            'enabled' => (bool) env('CONTENT_SECURITY_REPORT_DAILY', true),
+            'at' => env('CONTENT_SECURITY_REPORT_DAILY_AT', '07:30'),
+        ],
+
+        'weekly' => [
+            'enabled' => (bool) env('CONTENT_SECURITY_REPORT_WEEKLY', true),
+            'day' => env('CONTENT_SECURITY_REPORT_WEEKLY_DAY', 'monday'),
+            'at' => env('CONTENT_SECURITY_REPORT_WEEKLY_AT', '08:00'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Maintenance schedule
+    |--------------------------------------------------------------------------
+    */
+
+    'schedule' => [
+        'cleanup_quarantine' => (bool) env('CONTENT_SECURITY_SCHEDULE_CLEANUP', true),
+        'cleanup_at' => '03:30',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Admin console
     |--------------------------------------------------------------------------
     | Authorization is the host application's decision. Register a callback
@@ -360,6 +410,19 @@ return [
         'middleware' => ['web', 'auth'],
         'gate' => null,
         'per_page' => 25,
+
+        /*
+        | Runtime policy editing from the console.
+        |
+        | Config stays the baseline either way; with this on, the database
+        | may hold per-policy overrides on top of it, each change audited
+        | via the PolicyChanged event. `forbidden_extensions` and the
+        | max_size ceiling above are never overridable.
+        |
+        | Turn it off for installations that want their security policy to
+        | be reviewable in a diff and nowhere else.
+        */
+        'manage_policies' => (bool) env('CONTENT_SECURITY_MANAGE_POLICIES', true),
         // Filesystem paths are operational detail; hidden unless switched on.
         'expose_paths' => false,
         'brand' => [

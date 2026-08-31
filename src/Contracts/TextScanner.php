@@ -9,5 +9,5 @@ use LaravelPlus\ContentSecurity\Domain\Scan\ScanResult;
 
 interface TextScanner
 {
-    public function scan(string $text, ?TextPolicy $policy = null): ScanResult;
+    public function scanText(string $text, TextPolicy|string|null $policy = null): ScanResult;
 }

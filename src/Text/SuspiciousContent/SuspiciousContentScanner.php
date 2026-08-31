@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\Text\SuspiciousContent;
 
+use LaravelPlus\ContentSecurity\Contracts\TextInspector;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
 
@@ -23,7 +25,7 @@ use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
  * Findings are therefore Low/Medium by default: they are worth recording and
  * worth alerting on, and they are not worth blocking a user over on their own.
  */
-final class SuspiciousContentScanner
+final class SuspiciousContentScanner implements TextInspector
 {
     /**
      * @var list<array{0: string, 1: string, 2: ThreatLevel, 3: string}>
@@ -60,10 +62,7 @@ final class SuspiciousContentScanner
         ['text.bidi_override', '/[\x{202a}-\x{202e}\x{2066}-\x{2069}]/u', ThreatLevel::Medium, 'The text contains bidirectional override characters, which can disguise its true content.'],
     ];
 
-    /**
-     * @return array{threats: list<Threat>, metadata: array<string, mixed>}
-     */
-    public function inspect(string $text): array
+    public function inspect(string $text): Findings
     {
         $threats = [];
         $matched = [];
@@ -99,12 +98,9 @@ final class SuspiciousContentScanner
             );
         }
 
-        return [
-            'threats' => $threats,
-            'metadata' => [
-                'length' => mb_strlen($text),
-                'patterns_matched' => $matched,
-            ],
-        ];
+        return Findings::of($threats, [
+            'length' => mb_strlen($text),
+            'patterns_matched' => $matched,
+        ]);
     }
 }

@@ -31,7 +31,8 @@
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.27",
         "orchestra/testbench": "^11.0",
-        "pestphp/pest": "^4.0"
+        "pestphp/pest": "^4.0",
+        "inertiajs/inertia-laravel": "^3.0"
     },
     "suggest": {
         "ext-zip": "Required to inspect ZIP archives (zip bombs, path traversal, embedded executables).",

@@ -161,7 +161,7 @@ final class FileReference
         $handle = $this->stream();
 
         try {
-            $head = fread($handle, $bytes);
+            $head = fread($handle, max(1, $bytes));
         } finally {
             fclose($handle);
         }

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         failOnWarning="true"
+         failOnRisky="true">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <!-- ClamAV integration lives in its own suite so `composer test` passes
+             on a machine with no daemon installed. Run it explicitly, with the
+             Integration testsuite selected, where clamd is available. -->
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_KEY" value="base64:2fl+Ktg9DHDzIZ8YKKm1lMPtJXjTeJRqVLDvXRC4RCg="/>
+        <env name="DB_CONNECTION" value="testing"/>
+        <env name="CONTENT_SECURITY_MALWARE_DRIVER" value="null"/>
+    </php>
+</phpunit>

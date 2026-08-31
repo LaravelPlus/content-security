@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\File\Checks;
 
-use LaravelPlus\ContentSecurity\Contracts\FileCheck;
 use LaravelPlus\ContentSecurity\Domain\File\FileReference;
 use LaravelPlus\ContentSecurity\Domain\Policy\FilePolicy;
-use LaravelPlus\ContentSecurity\Domain\Scan\CheckResult;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanContext;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
@@ -20,7 +19,7 @@ use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
  * Windows binary renamed to .jpg is caught here; a novel trojan is not. That
  * is what the malware engine is for.
  */
-final class MagicBytesCheck implements FileCheck
+final class MagicBytesCheck extends AbstractFileCheck
 {
     /**
      * Signature => [label, threat level]. Offsets are all zero except where
@@ -51,22 +50,17 @@ final class MagicBytesCheck implements FileCheck
         return 'Magic bytes';
     }
 
-    public function appliesTo(FileReference $file, FilePolicy $policy): bool
-    {
-        return true;
-    }
-
-    public function check(FileReference $file, FilePolicy $policy, ScanContext $context): CheckResult
+    protected function inspect(FileReference $file, FilePolicy $policy, ScanContext $context): Findings
     {
         $head = $file->head(8192);
 
         if ($head === '') {
-            return CheckResult::skipped($this->key(), 'The file has no readable header.');
+            return Findings::none(['header_bytes' => 0]);
         }
 
         foreach (self::SIGNATURES as $signature => [$label, $level]) {
             if (str_starts_with($head, $signature)) {
-                return CheckResult::infected($this->key(), Threat::make(
+                return Findings::of(Threat::make(
                     name: 'file.executable_content',
                     level: $level,
                     source: $this->key(),
@@ -79,7 +73,7 @@ final class MagicBytesCheck implements FileCheck
         // A PHP tag *anywhere* in the header of something claiming to be an
         // image: the polyglot upload that survives getimagesize().
         if (preg_match('/<\?php|<\?=/i', $head) === 1) {
-            return CheckResult::infected($this->key(), Threat::make(
+            return Findings::of(Threat::make(
                 name: 'file.embedded_php',
                 level: ThreatLevel::Critical,
                 source: $this->key(),
@@ -87,6 +81,6 @@ final class MagicBytesCheck implements FileCheck
             ), ['signature' => 'embedded PHP']);
         }
 
-        return CheckResult::passed($this->key(), ['header_bytes' => strlen($head)]);
+        return Findings::none(['header_bytes' => strlen($head)]);
     }
 }

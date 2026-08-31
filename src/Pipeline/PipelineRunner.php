@@ -31,8 +31,15 @@ final class PipelineRunner
     }
 
     /**
-     * @param  list<SecurityCheck>  $checks
-     * @param  callable(SecurityCheck): CheckResult  $run
+     * Generic over the check type so a file pipeline can pass a
+     * callable(FileCheck) and a text pipeline a callable(TextCheck) — PHP
+     * parameter types are contravariant, and a plain callable(SecurityCheck)
+     * would reject both.
+     *
+     * @template TCheck of SecurityCheck
+     *
+     * @param  list<TCheck>  $checks
+     * @param  callable(TCheck): CheckResult  $run
      * @return list<CheckResult>
      */
     public function run(array $checks, callable $run): array

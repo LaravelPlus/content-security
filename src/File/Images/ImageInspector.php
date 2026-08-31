@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\File\Images;
 
+use LaravelPlus\ContentSecurity\Contracts\ImageInspector as ImageInspectorContract;
 use LaravelPlus\ContentSecurity\Domain\File\FileReference;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
 
@@ -13,7 +15,7 @@ use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
  * so what reaches storage is pixels the server drew — not the uploader's
  * container, its metadata, or whatever it appended after the last marker.
  */
-final class ImageInspector
+final class ImageInspector implements ImageInspectorContract
 {
     private const DECODABLE = [
         IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_GIF, IMAGETYPE_WEBP, IMAGETYPE_BMP,
@@ -34,13 +36,14 @@ final class ImageInspector
         );
     }
 
-    public function isImage(FileReference $file): bool
+    public function handles(FileReference $file): bool
     {
         return @getimagesize($file->path) !== false
-            || $this->looksLikeSvg($file);
+            || $this->isVector($file);
     }
 
-    public function looksLikeSvg(FileReference $file): bool
+    /** SVG is XML, not pixels — it takes a different path entirely. */
+    public function isVector(FileReference $file): bool
     {
         if ($file->extension() === 'svg') {
             return true;
@@ -49,27 +52,21 @@ final class ImageInspector
         return str_contains(mb_strtolower($file->head(1024)), '<svg');
     }
 
-    /**
-     * @return array{threats: list<Threat>, metadata: array<string, mixed>}
-     */
-    public function inspect(FileReference $file): array
+    public function inspect(FileReference $file): Findings
     {
         $info = @getimagesize($file->path);
 
         if ($info === false) {
-            return [
-                'threats' => [Threat::make(
-                    name: 'image.undecodable',
-                    level: ThreatLevel::High,
-                    source: 'image',
-                    description: 'The file claims to be an image but no decoder recognises it.',
-                )],
-                'metadata' => ['decodable' => false],
-            ];
+            return Findings::of(Threat::make(
+                name: 'image.undecodable',
+                level: ThreatLevel::High,
+                source: 'image',
+                description: 'The file claims to be an image but no decoder recognises it.',
+            ), ['decodable' => false]);
         }
 
         [$width, $height] = $info;
-        $type = (int) ($info[2] ?? 0);
+        $type = (int) $info[2];
         $pixels = $width * $height;
 
         $threats = [];
@@ -104,13 +101,13 @@ final class ImageInspector
             // this build may not decode it. Reported, not rejected.
             $metadata['full_decode'] = false;
 
-            return ['threats' => $threats, 'metadata' => $metadata];
+            return Findings::of($threats, $metadata);
         }
 
         if (! function_exists('imagecreatefromstring')) {
             $metadata['full_decode'] = false;
 
-            return ['threats' => $threats, 'metadata' => $metadata];
+            return Findings::of($threats, $metadata);
         }
 
         // Trailing data after the image's own end marker is the classic
@@ -130,7 +127,7 @@ final class ImageInspector
         $metadata['full_decode'] = true;
         $metadata['trailing_bytes'] = $trailing;
 
-        return ['threats' => $threats, 'metadata' => $metadata];
+        return Findings::of($threats, $metadata);
     }
 
     /**
@@ -147,7 +144,7 @@ final class ImageInspector
 
         $info = @getimagesize($file->path);
 
-        if ($info === false || ! in_array((int) ($info[2] ?? 0), self::DECODABLE, true)) {
+        if ($info === false || ! in_array((int) $info[2], self::DECODABLE, true)) {
             return false;
         }
 

@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\Text\Checks;
 
-use LaravelPlus\ContentSecurity\Contracts\TextCheck;
 use LaravelPlus\ContentSecurity\Domain\Policy\TextPolicy;
-use LaravelPlus\ContentSecurity\Domain\Scan\CheckResult;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanContext;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
 
 /**
- * Runs first so the pattern checks below never face a 40 MB string.
+ * Runs first, and cannot be switched off: it is what stops every pattern
+ * check below from being handed an unbounded string.
  */
-final class LengthCheck implements TextCheck
+final class LengthCheck extends AbstractTextCheck
 {
     public function key(): string
     {
@@ -26,20 +26,25 @@ final class LengthCheck implements TextCheck
         return 'Length';
     }
 
-    public function check(string $text, TextPolicy $policy, ScanContext $context): CheckResult
+    protected function inspect(string $text, TextPolicy $policy, ScanContext $context): Findings
     {
         $length = mb_strlen($text);
+        $metadata = ['length' => $length, 'max_length' => $policy->maxLength];
 
         if ($length > $policy->maxLength) {
-            return CheckResult::infected($this->key(), Threat::make(
+            return Findings::of(Threat::make(
                 name: 'text.too_long',
                 level: ThreatLevel::Medium,
                 source: $this->key(),
-                description: sprintf('The text is %d characters; the policy allows %d.', $length, $policy->maxLength),
-                metadata: ['length' => $length, 'max_length' => $policy->maxLength],
-            ), ['length' => $length, 'max_length' => $policy->maxLength]);
+                description: sprintf(
+                    'The text is %d characters; the policy allows %d.',
+                    $length,
+                    $policy->maxLength,
+                ),
+                metadata: $metadata,
+            ), $metadata);
         }
 
-        return CheckResult::passed($this->key(), ['length' => $length, 'max_length' => $policy->maxLength]);
+        return Findings::none($metadata);
     }
 }

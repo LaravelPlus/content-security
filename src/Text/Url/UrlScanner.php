@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\Text\Url;
 
+use LaravelPlus\ContentSecurity\Contracts\UrlInspector;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
 
@@ -16,7 +18,7 @@ use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
  * bidding, and because DNS answers can change between the check and the
  * request (the rebinding problem — see the README).
  */
-final class UrlScanner
+final class UrlScanner implements UrlInspector
 {
     /**
      * @param  list<string>  $allowedSchemes
@@ -53,45 +55,33 @@ final class UrlScanner
         );
     }
 
-    /**
-     * @return array{threats: list<Threat>, metadata: array<string, mixed>}
-     */
-    public function inspect(string $url): array
+    public function inspect(string $url): Findings
     {
         $url = trim($url);
         $metadata = ['url_length' => mb_strlen($url)];
 
         if ($url === '') {
-            return [
-                'threats' => [$this->threat('url.empty', ThreatLevel::Low, 'The URL is empty.')],
-                'metadata' => $metadata,
-            ];
+            return Findings::of($this->threat('url.empty', ThreatLevel::Low, 'The URL is empty.'), $metadata);
         }
 
         // Control characters and whitespace inside a URL are how a payload
         // hides from a naive scheme check: "java\nscript:alert(1)".
         if (preg_match('/[\x00-\x1f\x7f]/', $url) === 1) {
-            return [
-                'threats' => [$this->threat(
-                    'url.control_characters',
-                    ThreatLevel::High,
-                    'The URL contains control characters.',
-                )],
-                'metadata' => $metadata,
-            ];
+            return Findings::of($this->threat(
+                'url.control_characters',
+                ThreatLevel::High,
+                'The URL contains control characters.',
+            ), $metadata);
         }
 
         $parts = parse_url($url);
 
         if ($parts === false || ! isset($parts['scheme'])) {
-            return [
-                'threats' => [$this->threat(
-                    'url.malformed',
-                    ThreatLevel::Medium,
-                    'The URL is malformed or has no scheme.',
-                )],
-                'metadata' => $metadata,
-            ];
+            return Findings::of($this->threat(
+                'url.malformed',
+                ThreatLevel::Medium,
+                'The URL is malformed or has no scheme.',
+            ), $metadata);
         }
 
         $scheme = mb_strtolower($parts['scheme']);
@@ -114,7 +104,7 @@ final class UrlScanner
                 ['scheme' => $scheme],
             );
 
-            return ['threats' => $threats, 'metadata' => $metadata];
+            return Findings::of($threats, $metadata);
         }
 
         if ($this->blockCredentials && (isset($parts['user']) || isset($parts['pass']))) {
@@ -128,7 +118,7 @@ final class UrlScanner
         if ($host === null || $host === '') {
             $threats[] = $this->threat('url.no_host', ThreatLevel::Medium, 'The URL has no host.');
 
-            return ['threats' => $threats, 'metadata' => $metadata];
+            return Findings::of($threats, $metadata);
         }
 
         if ($this->blockPunycode && $this->looksHomographic($host)) {
@@ -164,12 +154,12 @@ final class UrlScanner
             }
         }
 
-        return ['threats' => $threats, 'metadata' => $metadata];
+        return Findings::of($threats, $metadata);
     }
 
     public function isSafe(string $url): bool
     {
-        foreach ($this->inspect($url)['threats'] as $threat) {
+        foreach ($this->inspect($url)->threats as $threat) {
             if ($threat->isAtLeast(ThreatLevel::Medium)) {
                 return false;
             }

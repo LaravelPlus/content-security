@@ -4,23 +4,21 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\Text\Checks;
 
-use LaravelPlus\ContentSecurity\Contracts\TextCheck;
+use LaravelPlus\ContentSecurity\Contracts\UrlInspector;
 use LaravelPlus\ContentSecurity\Domain\Policy\TextPolicy;
-use LaravelPlus\ContentSecurity\Domain\Scan\CheckResult;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanContext;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
-use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
-use LaravelPlus\ContentSecurity\Text\Url\UrlScanner;
 
 /**
- * Pulls URLs out of free text and runs each through the URL scanner.
+ * Pulls URLs out of free text and runs each through the URL inspector.
  */
-final class UrlsCheck implements TextCheck
+final class UrlsCheck extends AbstractTextCheck
 {
-    /** Bounded so a wall of links cannot turn one scan into thousands. */
+    /** Bounded, so a wall of links cannot turn one scan into thousands. */
     private const MAX_URLS = 50;
 
-    public function __construct(private readonly UrlScanner $scanner) {}
+    public function __construct(private readonly UrlInspector $inspector) {}
 
     public function key(): string
     {
@@ -32,12 +30,12 @@ final class UrlsCheck implements TextCheck
         return 'URLs';
     }
 
-    public function check(string $text, TextPolicy $policy, ScanContext $context): CheckResult
+    protected function inspect(string $text, TextPolicy $policy, ScanContext $context): Findings
     {
         $urls = $this->extract($text);
 
         if ($urls === []) {
-            return CheckResult::passed($this->key(), ['urls' => 0]);
+            return Findings::none(['urls' => 0]);
         }
 
         $threats = [];
@@ -50,7 +48,7 @@ final class UrlsCheck implements TextCheck
 
             $inspected++;
 
-            foreach ($this->scanner->inspect($url)['threats'] as $threat) {
+            foreach ($this->inspector->inspect($url)->threats as $threat) {
                 $threats[] = Threat::make(
                     name: $threat->name,
                     level: $threat->level,
@@ -61,24 +59,11 @@ final class UrlsCheck implements TextCheck
             }
         }
 
-        $metadata = [
+        return Findings::of($threats, [
             'urls' => count($urls),
             'inspected' => $inspected,
             'truncated' => count($urls) > self::MAX_URLS,
-        ];
-
-        if ($threats === []) {
-            return CheckResult::passed($this->key(), $metadata);
-        }
-
-        $blocking = array_filter(
-            $threats,
-            static fn (Threat $threat): bool => $threat->isAtLeast(ThreatLevel::High),
-        );
-
-        return $blocking !== []
-            ? CheckResult::infected($this->key(), array_values($threats), $metadata)
-            : CheckResult::suspicious($this->key(), array_values($threats), $metadata);
+        ]);
     }
 
     /**
@@ -86,8 +71,8 @@ final class UrlsCheck implements TextCheck
      */
     private function extract(string $text): array
     {
-        // Schemes first, so javascript:/data: payloads are caught rather
-        // than skipped by an http-only pattern.
+        // Any scheme, not just http(s): a pattern that only matches http
+        // would skip the javascript: and data: payloads that matter most.
         preg_match_all('#\b[a-z][a-z0-9+.-]{1,20}:(?://)?[^\s<>"\']{1,2000}#i', $text, $matches);
 
         /** @var list<string> $urls */

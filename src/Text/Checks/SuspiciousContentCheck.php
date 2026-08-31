@@ -4,17 +4,14 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\Text\Checks;
 
-use LaravelPlus\ContentSecurity\Contracts\TextCheck;
+use LaravelPlus\ContentSecurity\Contracts\TextInspector;
 use LaravelPlus\ContentSecurity\Domain\Policy\TextPolicy;
-use LaravelPlus\ContentSecurity\Domain\Scan\CheckResult;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanContext;
-use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
-use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
-use LaravelPlus\ContentSecurity\Text\SuspiciousContent\SuspiciousContentScanner;
 
-final class SuspiciousContentCheck implements TextCheck
+final class SuspiciousContentCheck extends AbstractTextCheck
 {
-    public function __construct(private readonly SuspiciousContentScanner $scanner) {}
+    public function __construct(private readonly TextInspector $inspector) {}
 
     public function key(): string
     {
@@ -26,21 +23,8 @@ final class SuspiciousContentCheck implements TextCheck
         return 'Suspicious content';
     }
 
-    public function check(string $text, TextPolicy $policy, ScanContext $context): CheckResult
+    protected function inspect(string $text, TextPolicy $policy, ScanContext $context): Findings
     {
-        ['threats' => $threats, 'metadata' => $metadata] = $this->scanner->inspect($text);
-
-        if ($threats === []) {
-            return CheckResult::passed($this->key(), $metadata);
-        }
-
-        $blocking = array_filter(
-            $threats,
-            static fn (Threat $threat): bool => $threat->isAtLeast(ThreatLevel::High),
-        );
-
-        return $blocking !== []
-            ? CheckResult::infected($this->key(), array_values($threats), $metadata)
-            : CheckResult::suspicious($this->key(), array_values($threats), $metadata);
+        return $this->inspector->inspect($text);
     }
 }

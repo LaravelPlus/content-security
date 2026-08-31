@@ -4,28 +4,27 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\Text\Checks;
 
-use LaravelPlus\ContentSecurity\Contracts\TextCheck;
+use LaravelPlus\ContentSecurity\Contracts\Sanitizer;
 use LaravelPlus\ContentSecurity\Domain\Policy\TextPolicy;
-use LaravelPlus\ContentSecurity\Domain\Scan\CheckResult;
+use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanContext;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
-use LaravelPlus\ContentSecurity\Text\Html\HtmlSanitizer;
 
 /**
- * Runs the input through the sanitizer and reports what the sanitizer had to
- * remove. The verdict is a *difference*, which is the only honest way to ask
- * "was this HTML safe?" — the parser's opinion, not a pattern's.
+ * Runs the input through the sanitizer and reports what had to be removed.
+ * The verdict is a *difference*, which is the only honest way to answer "was
+ * this HTML safe?" — a parser's opinion, not a pattern's.
  *
- * The sanitized output travels back in the check metadata so a caller that
- * wants the clean version does not have to sanitize twice.
+ * The sanitized output travels back in the check metadata, so a caller that
+ * wants the clean version does not sanitize twice.
  */
-final class HtmlCheck implements TextCheck
+final class HtmlCheck extends AbstractTextCheck
 {
     /** Below this, the difference is entity normalisation, not a removal. */
     private const NOISE_THRESHOLD = 8;
 
-    public function __construct(private readonly HtmlSanitizer $sanitizer) {}
+    public function __construct(private readonly Sanitizer $sanitizer) {}
 
     public function key(): string
     {
@@ -37,7 +36,7 @@ final class HtmlCheck implements TextCheck
         return 'HTML sanitization';
     }
 
-    public function check(string $text, TextPolicy $policy, ScanContext $context): CheckResult
+    protected function inspect(string $text, TextPolicy $policy, ScanContext $context): Findings
     {
         $sanitized = $this->sanitizer->sanitize($text);
 
@@ -53,10 +52,10 @@ final class HtmlCheck implements TextCheck
         ];
 
         if ($sanitized === $text || $removed <= self::NOISE_THRESHOLD) {
-            return CheckResult::passed($this->key(), $metadata);
+            return Findings::none($metadata);
         }
 
-        return CheckResult::suspicious($this->key(), Threat::make(
+        return Findings::of(Threat::make(
             name: 'html.unsafe_markup_removed',
             // Suspicious, not infected: the sanitizer already neutralised
             // it. This tells an operator someone is probing, and lets the

@@ -1,0 +1,95 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.5']
+        laravel: ['13.*']
+        stability: [prefer-lowest, prefer-stable]
+
+    name: PHP ${{ matrix.php }} · Laravel ${{ matrix.laravel }} · ${{ matrix.stability }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          # fileinfo is required; zip and gd gate the archive and image
+          # checks, which report as unavailable without them.
+          extensions: fileinfo, zip, gd, sqlite3, pdo_sqlite
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+
+      # The suite must pass with no ClamAV on the machine — every test that
+      # needs an engine uses FakeMalwareScanner.
+      - name: Tests
+        run: vendor/bin/pest --testsuite=Unit,Feature
+
+  quality:
+    runs-on: ubuntu-latest
+    name: static analysis & style
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: fileinfo, zip, gd
+          coverage: none
+
+      - run: composer install --prefer-dist --no-interaction
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --no-progress
+
+      - name: Pint
+        run: vendor/bin/pint --test --parallel
+
+  integration:
+    runs-on: ubuntu-latest
+    name: ClamAV integration
+
+    services:
+      clamav:
+        image: clamav/clamav:stable
+        ports: ['3310:3310']
+        options: >-
+          --health-cmd "clamdscan --ping 1"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: fileinfo, zip, gd, sqlite3, pdo_sqlite
+          coverage: none
+
+      - run: composer install --prefer-dist --no-interaction
+
+      - name: Tests against a real daemon
+        env:
+          CONTENT_SECURITY_MALWARE_DRIVER: clamav
+          CONTENT_SECURITY_CLAMAV_CONNECTION: tcp
+          CONTENT_SECURITY_CLAMAV_HOST: 127.0.0.1
+          CONTENT_SECURITY_CLAMAV_PORT: 3310
+        run: vendor/bin/pest --testsuite=Integration
