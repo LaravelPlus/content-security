@@ -26,7 +26,9 @@ const typed = ref('');
 watch(
     () => props.open,
     (open) => {
-        if (open) typed.value = '';
+        if (open) {
+            typed.value = '';
+        }
     },
 );
 
@@ -64,7 +66,9 @@ const canConfirm = () =>
                         >
                             {{ props.title }}
                         </h2>
-                        <p class="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                        <p
+                            class="mt-1 text-xs text-slate-600 dark:text-slate-400"
+                        >
                             {{ props.description }}
                         </p>
                     </div>
@@ -76,7 +80,11 @@ const canConfirm = () =>
                     <label
                         class="block text-xs font-medium text-slate-700 dark:text-slate-300"
                     >
-                        Type <span class="font-mono font-semibold">{{ props.requirePhrase }}</span> to confirm
+                        Type
+                        <span class="font-mono font-semibold">{{
+                            props.requirePhrase
+                        }}</span>
+                        to confirm
                     </label>
                     <input
                         v-model="typed"

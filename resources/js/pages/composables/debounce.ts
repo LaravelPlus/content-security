@@ -9,7 +9,10 @@ export function debounce<T extends (...args: never[]) => void>(
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     return (...args: Parameters<T>): void => {
-        if (timer !== undefined) clearTimeout(timer);
+        if (timer !== undefined) {
+            clearTimeout(timer);
+        }
+
         timer = setTimeout(() => callback(...args), wait);
     };
 }

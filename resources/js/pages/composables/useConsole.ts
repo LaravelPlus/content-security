@@ -1,5 +1,5 @@
-import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import type { ConsoleShared } from '../types';
 
 /**
@@ -30,8 +30,13 @@ export function useConsole() {
 }
 
 export function formatBytes(bytes: number | null | undefined): string {
-    if (bytes === null || bytes === undefined) return '—';
-    if (bytes === 0) return '0 B';
+    if (bytes === null || bytes === undefined) {
+        return '—';
+    }
+
+    if (bytes === 0) {
+        return '0 B';
+    }
 
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     const exponent = Math.min(
@@ -44,14 +49,21 @@ export function formatBytes(bytes: number | null | undefined): string {
 }
 
 export function formatDuration(ms: number | null | undefined): string {
-    if (ms === null || ms === undefined) return '—';
-    if (ms < 1000) return `${Math.round(ms)} ms`;
+    if (ms === null || ms === undefined) {
+        return '—';
+    }
+
+    if (ms < 1000) {
+        return `${Math.round(ms)} ms`;
+    }
 
     return `${(ms / 1000).toFixed(2)} s`;
 }
 
 export function formatDate(value: string | null | undefined): string {
-    if (!value) return '—';
+    if (!value) {
+        return '—';
+    }
 
     return new Date(value).toLocaleString(undefined, {
         year: 'numeric',

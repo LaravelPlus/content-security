@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import Icon from './Icon.vue';
 import { formatDate } from '../composables/useConsole';
 import type { ScannerHealth } from '../types';
+import Icon from './Icon.vue';
 
 const props = defineProps<{ health: ScannerHealth }>();
 
@@ -50,7 +50,7 @@ const tone = computed(() => {
                     {{ props.health.scanner }}
                     <span
                         v-if="props.health.active"
-                        class="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white dark:bg-slate-100 dark:text-slate-900"
+                        class="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white uppercase dark:bg-slate-100 dark:text-slate-900"
                     >
                         active
                     </span>
@@ -64,7 +64,10 @@ const tone = computed(() => {
                 </p>
             </div>
 
-            <span class="flex items-center gap-1.5 text-xs font-semibold uppercase" :class="tone.text">
+            <span
+                class="flex items-center gap-1.5 text-xs font-semibold uppercase"
+                :class="tone.text"
+            >
                 <span class="h-2 w-2 rounded-full" :class="tone.dot" />
                 {{ props.health.status }}
             </span>
@@ -91,7 +94,7 @@ const tone = computed(() => {
             </div>
             <div v-if="props.health.ping_ms !== null">
                 <dt class="text-slate-500 dark:text-slate-400">Ping</dt>
-                <dd class="tabular-nums text-slate-700 dark:text-slate-300">
+                <dd class="text-slate-700 tabular-nums dark:text-slate-300">
                     {{ Math.round(props.health.ping_ms) }} ms
                 </dd>
             </div>

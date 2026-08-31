@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import SecurityAdminLayout from '../layouts/SecurityAdminLayout.vue';
+import { ref } from 'vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
+import EmptyState from '../components/EmptyState.vue';
+import Icon from '../components/Icon.vue';
+import Pagination from '../components/Pagination.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import ThreatBadge from '../components/ThreatBadge.vue';
-import EmptyState from '../components/EmptyState.vue';
-import ConfirmDialog from '../components/ConfirmDialog.vue';
-import Pagination from '../components/Pagination.vue';
-import Icon from '../components/Icon.vue';
 import { formatBytes, formatDate, useConsole } from '../composables/useConsole';
+import SecurityAdminLayout from '../layouts/SecurityAdminLayout.vue';
 import type { Paginated, Scan } from '../types';
 
 const props = defineProps<{
@@ -21,14 +21,25 @@ const { route } = useConsole();
 const releasing = ref<Scan | null>(null);
 const deleting = ref<Scan | null>(null);
 
-const releaseForm = useForm({ disk: 'local', path: '', override: false, reason: '' });
+const releaseForm = useForm({
+    disk: 'local',
+    path: '',
+    override: false,
+    reason: '',
+});
 
 const rescan = (scan: Scan): void => {
-    router.post(route(`quarantine/${scan.id}/rescan`), {}, { preserveScroll: true });
+    router.post(
+        route(`quarantine/${scan.id}/rescan`),
+        {},
+        { preserveScroll: true },
+    );
 };
 
 const submitRelease = (): void => {
-    if (!releasing.value) return;
+    if (!releasing.value) {
+        return;
+    }
 
     releaseForm.post(route(`quarantine/${releasing.value.id}/release`), {
         preserveScroll: true,
@@ -40,7 +51,9 @@ const submitRelease = (): void => {
 };
 
 const confirmDelete = (): void => {
-    if (!deleting.value) return;
+    if (!deleting.value) {
+        return;
+    }
 
     router.delete(route(`quarantine/${deleting.value.id}`), {
         preserveScroll: true,
@@ -60,7 +73,8 @@ const inputClass =
     <SecurityAdminLayout>
         <template #title>Quarantine</template>
         <template #description>
-            Files held out of normal storage. Deleted automatically after {{ props.retentionDays }} days.
+            Files held out of normal storage. Deleted automatically after
+            {{ props.retentionDays }} days.
         </template>
 
         <EmptyState
@@ -79,13 +93,25 @@ const inputClass =
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <Icon name="file" :size="15" class="shrink-0 text-slate-400" />
-                            <p class="truncate font-medium" :title="item.subject">{{ item.subject }}</p>
+                            <Icon
+                                name="file"
+                                :size="15"
+                                class="shrink-0 text-slate-400"
+                            />
+                            <p
+                                class="truncate font-medium"
+                                :title="item.subject"
+                            >
+                                {{ item.subject }}
+                            </p>
                             <StatusBadge :status="item.status" />
                         </div>
-                        <p class="mt-1 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                        <p
+                            class="mt-1 font-mono text-[11px] text-slate-500 dark:text-slate-400"
+                        >
                             {{ item.short_id }} · {{ formatBytes(item.size) }} ·
-                            {{ item.detected_mime ?? 'unknown type' }} · {{ formatDate(item.created_at) }}
+                            {{ item.detected_mime ?? 'unknown type' }} ·
+                            {{ formatDate(item.created_at) }}
                         </p>
                     </div>
 
@@ -114,7 +140,10 @@ const inputClass =
                     </div>
                 </div>
 
-                <ul v-if="item.threats && item.threats.length > 0" class="mt-3 flex flex-wrap gap-2">
+                <ul
+                    v-if="item.threats && item.threats.length > 0"
+                    class="mt-3 flex flex-wrap gap-2"
+                >
                     <li
                         v-for="threat in item.threats"
                         :key="threat.id ?? threat.name"
@@ -145,12 +174,22 @@ const inputClass =
         >
             <div class="mt-4 space-y-3">
                 <label class="block">
-                    <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Target disk</span>
-                    <input v-model="releaseForm.disk" type="text" :class="inputClass" />
+                    <span
+                        class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                        >Target disk</span
+                    >
+                    <input
+                        v-model="releaseForm.disk"
+                        type="text"
+                        :class="inputClass"
+                    />
                 </label>
 
                 <label class="block">
-                    <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Target path</span>
+                    <span
+                        class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                        >Target path</span
+                    >
                     <input
                         v-model="releaseForm.path"
                         type="text"
@@ -160,22 +199,41 @@ const inputClass =
                 </label>
 
                 <label class="flex items-start gap-2">
-                    <input v-model="releaseForm.override" type="checkbox" class="mt-0.5" />
+                    <input
+                        v-model="releaseForm.override"
+                        type="checkbox"
+                        class="mt-0.5"
+                    />
                     <span class="text-xs text-slate-600 dark:text-slate-400">
                         Release even if the rescan is not clean.
-                        <strong class="text-red-600 dark:text-red-400">This is recorded in the audit log.</strong>
+                        <strong class="text-red-600 dark:text-red-400"
+                            >This is recorded in the audit log.</strong
+                        >
                     </span>
                 </label>
 
                 <label v-if="releaseForm.override" class="block">
-                    <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                    <span
+                        class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >
                         Reason for the override
                     </span>
-                    <input v-model="releaseForm.reason" type="text" :class="inputClass" />
+                    <input
+                        v-model="releaseForm.reason"
+                        type="text"
+                        :class="inputClass"
+                    />
                 </label>
 
-                <p v-if="releaseForm.errors.path" class="text-xs text-red-600">{{ releaseForm.errors.path }}</p>
-                <p v-if="releaseForm.errors.reason" class="text-xs text-red-600">{{ releaseForm.errors.reason }}</p>
+                <p v-if="releaseForm.errors.path" class="text-xs text-red-600">
+                    {{ releaseForm.errors.path }}
+                </p>
+                <p
+                    v-if="releaseForm.errors.reason"
+                    class="text-xs text-red-600"
+                >
+                    {{ releaseForm.errors.reason }}
+                </p>
             </div>
         </ConfirmDialog>
 

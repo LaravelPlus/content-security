@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import Icon from './Icon.vue';
 import { formatDate } from '../composables/useConsole';
 import type { ScanEvent } from '../types';
+import Icon from './Icon.vue';
 
 defineProps<{ events: ScanEvent[] }>();
 </script>
 
 <template>
-    <ol class="relative space-y-4 border-l border-slate-200 pl-5 dark:border-slate-800">
+    <ol
+        class="relative space-y-4 border-l border-slate-200 pl-5 dark:border-slate-800"
+    >
         <li v-for="(event, index) in events" :key="index" class="relative">
             <span
                 class="absolute -left-[26px] flex h-4 w-4 items-center justify-center rounded-full ring-4 ring-white dark:ring-slate-950"
@@ -19,7 +21,13 @@ defineProps<{ events: ScanEvent[] }>();
                 }"
             >
                 <Icon
-                    :name="event.state === 'alert' ? 'alert' : event.state === 'done' ? 'check' : 'clock'"
+                    :name="
+                        event.state === 'alert'
+                            ? 'alert'
+                            : event.state === 'done'
+                              ? 'check'
+                              : 'clock'
+                    "
                     :size="9"
                 />
             </span>

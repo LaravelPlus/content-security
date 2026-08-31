@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
-import { debounce } from '../composables/debounce';
-import SecurityAdminLayout from '../layouts/SecurityAdminLayout.vue';
-import ScanTable from '../components/ScanTable.vue';
-import Pagination from '../components/Pagination.vue';
+import { reactive, watch } from 'vue';
 import Icon from '../components/Icon.vue';
+import Pagination from '../components/Pagination.vue';
+import ScanTable from '../components/ScanTable.vue';
+import { debounce } from '../composables/debounce';
 import { useConsole } from '../composables/useConsole';
+import SecurityAdminLayout from '../layouts/SecurityAdminLayout.vue';
 import type { Paginated, Scan } from '../types';
 
 const props = defineProps<{
@@ -37,7 +37,9 @@ const form = reactive({
 const submit = debounce(() => {
     router.get(
         route('scans'),
-        Object.fromEntries(Object.entries(form).filter(([, value]) => value !== '')),
+        Object.fromEntries(
+            Object.entries(form).filter(([, value]) => value !== ''),
+        ),
         { preserveState: true, preserveScroll: true, replace: true },
     );
 }, 300);
@@ -61,14 +63,18 @@ const inputClass =
         <template #title>Scans</template>
         <template #description>Every scan on record, newest first.</template>
 
-        <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+        <div
+            class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+        >
             <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <label class="relative sm:col-span-2">
-                    <span class="sr-only">Search by filename, scan id or checksum</span>
+                    <span class="sr-only"
+                        >Search by filename, scan id or checksum</span
+                    >
                     <Icon
                         name="search"
                         :size="14"
-                        class="pointer-events-none absolute left-2.5 top-2.5 text-slate-400"
+                        class="pointer-events-none absolute top-2.5 left-2.5 text-slate-400"
                     />
                     <input
                         v-model="form.q"
@@ -82,7 +88,11 @@ const inputClass =
                     <span class="sr-only">Status</span>
                     <select v-model="form.status" :class="inputClass">
                         <option value="">All statuses</option>
-                        <option v-for="status in props.options.statuses" :key="status" :value="status">
+                        <option
+                            v-for="status in props.options.statuses"
+                            :key="status"
+                            :value="status"
+                        >
                             {{ status }}
                         </option>
                     </select>
@@ -92,7 +102,11 @@ const inputClass =
                     <span class="sr-only">Type</span>
                     <select v-model="form.type" :class="inputClass">
                         <option value="">All types</option>
-                        <option v-for="type in props.options.types" :key="type" :value="type">
+                        <option
+                            v-for="type in props.options.types"
+                            :key="type"
+                            :value="type"
+                        >
                             {{ type }}
                         </option>
                     </select>
@@ -102,7 +116,11 @@ const inputClass =
                     <span class="sr-only">Scanner</span>
                     <select v-model="form.scanner" :class="inputClass">
                         <option value="">All scanners</option>
-                        <option v-for="scanner in props.options.scanners" :key="scanner" :value="scanner">
+                        <option
+                            v-for="scanner in props.options.scanners"
+                            :key="scanner"
+                            :value="scanner"
+                        >
                             {{ scanner }}
                         </option>
                     </select>
@@ -112,7 +130,11 @@ const inputClass =
                     <span class="sr-only">MIME type</span>
                     <select v-model="form.mime" :class="inputClass">
                         <option value="">All MIME types</option>
-                        <option v-for="mime in props.options.mimeTypes" :key="mime" :value="mime">
+                        <option
+                            v-for="mime in props.options.mimeTypes"
+                            :key="mime"
+                            :value="mime"
+                        >
                             {{ mime }}
                         </option>
                     </select>
@@ -122,7 +144,11 @@ const inputClass =
                     <span class="sr-only">Threat level</span>
                     <select v-model="form.level" :class="inputClass">
                         <option value="">Any threat level</option>
-                        <option v-for="level in props.options.levels" :key="level" :value="level">
+                        <option
+                            v-for="level in props.options.levels"
+                            :key="level"
+                            :value="level"
+                        >
                             {{ level }}
                         </option>
                     </select>
@@ -131,11 +157,19 @@ const inputClass =
                 <div class="flex gap-2">
                     <label class="flex-1">
                         <span class="sr-only">From date</span>
-                        <input v-model="form.from" type="date" :class="inputClass" />
+                        <input
+                            v-model="form.from"
+                            type="date"
+                            :class="inputClass"
+                        />
                     </label>
                     <label class="flex-1">
                         <span class="sr-only">To date</span>
-                        <input v-model="form.to" type="date" :class="inputClass" />
+                        <input
+                            v-model="form.to"
+                            type="date"
+                            :class="inputClass"
+                        />
                     </label>
                 </div>
             </div>

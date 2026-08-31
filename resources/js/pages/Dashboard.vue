@@ -1,15 +1,27 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import SecurityAdminLayout from './layouts/SecurityAdminLayout.vue';
-import MetricCard from './components/MetricCard.vue';
-import ScanTable from './components/ScanTable.vue';
-import ScannerHealthCard from './components/ScannerHealthCard.vue';
+import { computed } from 'vue';
 import ActivityChart from './components/ActivityChart.vue';
-import ThreatBadge from './components/ThreatBadge.vue';
 import Icon from './components/Icon.vue';
-import { formatDate, formatDuration, formatNumber, useConsole } from './composables/useConsole';
-import type { Posture, Scan, ScannerHealth, Statistics, Threat, TimelinePoint } from './types';
+import MetricCard from './components/MetricCard.vue';
+import ScannerHealthCard from './components/ScannerHealthCard.vue';
+import ScanTable from './components/ScanTable.vue';
+import ThreatBadge from './components/ThreatBadge.vue';
+import {
+    formatDate,
+    formatDuration,
+    formatNumber,
+    useConsole,
+} from './composables/useConsole';
+import SecurityAdminLayout from './layouts/SecurityAdminLayout.vue';
+import type {
+    Posture,
+    Scan,
+    ScannerHealth,
+    Statistics,
+    Threat,
+    TimelinePoint,
+} from './types';
 
 const props = defineProps<{
     statistics: Statistics;
@@ -59,7 +71,11 @@ const windows = [
 ];
 
 const setWindow = (hours: number): void => {
-    router.get(route(''), { hours }, { preserveScroll: true, preserveState: true });
+    router.get(
+        route(''),
+        { hours },
+        { preserveScroll: true, preserveState: true },
+    );
 };
 </script>
 
@@ -70,7 +86,11 @@ const setWindow = (hours: number): void => {
         <template #title>Overview</template>
         <template #description>
             Uploads and untrusted content checked over the last
-            {{ props.hours >= 24 ? `${Math.round(props.hours / 24)} day(s)` : `${props.hours} hour(s)` }}.
+            {{
+                props.hours >= 24
+                    ? `${Math.round(props.hours / 24)} day(s)`
+                    : `${props.hours} hour(s)`
+            }}.
         </template>
 
         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -79,9 +99,16 @@ const setWindow = (hours: number): void => {
                 :class="postureStyle.wrap"
                 role="status"
             >
-                <Icon :name="postureStyle.name" :size="20" :class="['mt-0.5 shrink-0', postureStyle.icon]" />
+                <Icon
+                    :name="postureStyle.name"
+                    :size="20"
+                    :class="['mt-0.5 shrink-0', postureStyle.icon]"
+                />
                 <div>
-                    <p class="text-sm font-semibold" :class="postureStyle.title">
+                    <p
+                        class="text-sm font-semibold"
+                        :class="postureStyle.title"
+                    >
                         {{ props.posture.headline }}
                     </p>
                     <p class="text-xs" :class="postureStyle.body">
@@ -90,7 +117,9 @@ const setWindow = (hours: number): void => {
                 </div>
             </div>
 
-            <div class="flex rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-900">
+            <div
+                class="flex rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-900"
+            >
                 <button
                     v-for="option in windows"
                     :key="option.hours"
@@ -108,9 +137,20 @@ const setWindow = (hours: number): void => {
             </div>
         </div>
 
-        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <MetricCard label="Scans" :value="formatNumber(props.statistics.window_total)" icon="scan" />
-            <MetricCard label="Clean" :value="formatNumber(props.statistics.clean)" tone="good" icon="check" />
+        <div
+            class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+        >
+            <MetricCard
+                label="Scans"
+                :value="formatNumber(props.statistics.window_total)"
+                icon="scan"
+            />
+            <MetricCard
+                label="Clean"
+                :value="formatNumber(props.statistics.clean)"
+                tone="good"
+                icon="check"
+            />
             <MetricCard
                 label="Suspicious"
                 :value="formatNumber(props.statistics.suspicious)"
@@ -216,11 +256,17 @@ const setWindow = (hours: number): void => {
                         class="flex items-start justify-between gap-3 px-4 py-2.5"
                     >
                         <div class="min-w-0">
-                            <p class="truncate font-mono text-xs" :title="threat.name">
+                            <p
+                                class="truncate font-mono text-xs"
+                                :title="threat.name"
+                            >
                                 {{ threat.name }}
                             </p>
-                            <p class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
-                                {{ threat.source }} · {{ formatDate(threat.created_at) }}
+                            <p
+                                class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400"
+                            >
+                                {{ threat.source }} ·
+                                {{ formatDate(threat.created_at) }}
                             </p>
                         </div>
                         <ThreatBadge :level="threat.level" />

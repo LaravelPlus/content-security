@@ -62,7 +62,14 @@ const paths: Record<IconName, string[]> = {
         'M20 19l-2-2',
     ],
     lock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 8 0v4'],
-    sliders: ['M4 6h16', 'M4 12h16', 'M4 18h16', 'M9 4v4', 'M15 10v4', 'M7 16v4'],
+    sliders: [
+        'M4 6h16',
+        'M4 12h16',
+        'M4 18h16',
+        'M9 4v4',
+        'M15 10v4',
+        'M7 16v4',
+    ],
     activity: ['M3 12h4l3 8 4-16 3 8h4'],
     search: ['M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z', 'M21 21l-4.3-4.3'],
     'chevron-right': ['M9 6l6 6-6 6'],
@@ -72,10 +79,20 @@ const paths: Record<IconName, string[]> = {
     alert: ['M12 3l9 16H3l9-16Z', 'M12 9v4', 'M12 17h.01'],
     clock: ['M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18Z', 'M12 7v5l3 2'],
     refresh: ['M21 12a9 9 0 1 1-3-6.7', 'M21 4v5h-5'],
-    trash: ['M4 7h16', 'M9 7V5h6v2', 'M6 7l1 13h10l1-13', 'M10 11v6', 'M14 11v6'],
+    trash: [
+        'M4 7h16',
+        'M9 7V5h6v2',
+        'M6 7l1 13h10l1-13',
+        'M10 11v6',
+        'M14 11v6',
+    ],
     unlock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 7.5-2'],
     file: ['M6 3h7l5 5v13H6z', 'M13 3v5h5'],
-    external: ['M14 4h6v6', 'M20 4l-8 8', 'M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5'],
+    external: [
+        'M14 4h6v6',
+        'M20 4l-8 8',
+        'M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5',
+    ],
 };
 </script>
 

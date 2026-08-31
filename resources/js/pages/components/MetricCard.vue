@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import Icon, { type IconName } from './Icon.vue';
+import Icon from './Icon.vue';
+import type { IconName } from './Icon.vue';
 
 const props = withDefaults(
     defineProps<{
@@ -39,7 +40,7 @@ const tones = {
                 class="text-slate-400 dark:text-slate-500"
             />
             <p
-                class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+                class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400"
             >
                 {{ props.label }}
             </p>
@@ -47,12 +48,19 @@ const tones = {
 
         <p
             class="mt-2 text-2xl font-semibold tabular-nums"
-            :class="isQuiet ? 'text-slate-400 dark:text-slate-600' : tones[props.tone]"
+            :class="
+                isQuiet
+                    ? 'text-slate-400 dark:text-slate-600'
+                    : tones[props.tone]
+            "
         >
             {{ props.value }}
         </p>
 
-        <p v-if="props.hint" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p
+            v-if="props.hint"
+            class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+        >
             {{ props.hint }}
         </p>
     </div>

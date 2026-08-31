@@ -65,7 +65,14 @@
         "analyse": "phpstan analyse",
         "lint": "pint --parallel",
         "lint:check": "pint --parallel --test",
-        "test:integration": "pest --testsuite=Integration"
+        "test:integration": "pest --testsuite=Integration",
+        "_comment_testbench_symlink": "orchestra/testbench symlinks its app skeleton's vendor back at this package's own vendor. The loop is harmless to PHP, but any tool that globs the host application (eslint, prettier, IDE indexers) walks it until ELOOP and dies. The tests pass without it, so it is removed after every install.",
+        "post-install-cmd": [
+            "@php -r \"@unlink('vendor/orchestra/testbench-core/laravel/vendor');\""
+        ],
+        "post-update-cmd": [
+            "@php -r \"@unlink('vendor/orchestra/testbench-core/laravel/vendor');\""
+        ]
     },
     "config": {
         "sort-packages": true,

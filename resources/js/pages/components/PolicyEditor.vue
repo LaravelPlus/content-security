@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
-import Icon from './Icon.vue';
-import ConfirmDialog from './ConfirmDialog.vue';
+import { computed, ref } from 'vue';
 import { formatBytes, useConsole } from '../composables/useConsole';
-import { ref } from 'vue';
+import ConfirmDialog from './ConfirmDialog.vue';
+import Icon from './Icon.vue';
 
 const props = defineProps<{
     policy: Record<string, any>;
@@ -50,39 +49,37 @@ const forbiddenTyped = computed(() => {
 });
 
 const submit = (): void => {
-    form
-        .transform((data) => {
-            const payload: Record<string, unknown> = {
-                type: props.type,
-                label: data.label,
-                checks: data.checks,
-                note: data.note || null,
-            };
+    form.transform((data) => {
+        const payload: Record<string, unknown> = {
+            type: props.type,
+            label: data.label,
+            checks: data.checks,
+            note: data.note || null,
+        };
 
-            if (props.type === 'file') {
-                payload.max_size = data.max_size;
-                payload.on_threat = data.on_threat;
-                payload.extensions = String(data.extensions)
-                    .split(',')
-                    .map((e: string) => e.trim().replace(/^\./, ''))
-                    .filter(Boolean);
-                payload.mime_types = String(data.mime_types)
-                    .split(',')
-                    .map((m: string) => m.trim())
-                    .filter(Boolean);
-            } else {
-                payload.max_length = data.max_length;
-            }
+        if (props.type === 'file') {
+            payload.max_size = data.max_size;
+            payload.on_threat = data.on_threat;
+            payload.extensions = String(data.extensions)
+                .split(',')
+                .map((e: string) => e.trim().replace(/^\./, ''))
+                .filter(Boolean);
+            payload.mime_types = String(data.mime_types)
+                .split(',')
+                .map((m: string) => m.trim())
+                .filter(Boolean);
+        } else {
+            payload.max_length = data.max_length;
+        }
 
-            return payload;
-        })
-        .put(route(`policies/${props.policy.name}`), {
-            preserveScroll: true,
-            onSuccess: () => {
-                open.value = false;
-                form.note = '';
-            },
-        });
+        return payload;
+    }).put(route(`policies/${props.policy.name}`), {
+        preserveScroll: true,
+        onSuccess: () => {
+            open.value = false;
+            form.note = '';
+        },
+    });
 };
 
 const reset = (): void => {
@@ -103,14 +100,16 @@ const inputClass =
 </script>
 
 <template>
-    <article class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <article
+        class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+    >
         <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
                 <h3 class="flex items-center gap-2 text-sm font-semibold">
                     {{ props.policy.label }}
                     <span
                         v-if="props.isDefault"
-                        class="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white dark:bg-slate-100 dark:text-slate-900"
+                        class="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold text-white uppercase dark:bg-slate-100 dark:text-slate-900"
                     >
                         default
                     </span>
@@ -127,10 +126,18 @@ const inputClass =
                                 : 'Straight from config/content-security.php'
                         "
                     >
-                        {{ props.policy.source === 'database' ? 'overridden' : 'config' }}
+                        {{
+                            props.policy.source === 'database'
+                                ? 'overridden'
+                                : 'config'
+                        }}
                     </span>
                 </h3>
-                <p class="font-mono text-[11px] text-slate-500 dark:text-slate-400">{{ props.policy.name }}</p>
+                <p
+                    class="font-mono text-[11px] text-slate-500 dark:text-slate-400"
+                >
+                    {{ props.policy.name }}
+                </p>
             </div>
 
             <div v-if="props.editable" class="flex shrink-0 gap-1.5">
@@ -139,7 +146,8 @@ const inputClass =
                     class="flex items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                     @click="open = !open"
                 >
-                    <Icon name="sliders" :size="12" /> {{ open ? 'Close' : 'Edit' }}
+                    <Icon name="sliders" :size="12" />
+                    {{ open ? 'Close' : 'Edit' }}
                 </button>
                 <button
                     v-if="props.policy.source === 'database'"
@@ -154,20 +162,36 @@ const inputClass =
 
         <!-- Read-only summary -->
         <dl v-if="!open" class="mt-3 space-y-2 text-xs">
-            <div v-if="props.type === 'file'" class="flex justify-between gap-3">
+            <div
+                v-if="props.type === 'file'"
+                class="flex justify-between gap-3"
+            >
                 <dt class="text-slate-500 dark:text-slate-400">Maximum size</dt>
-                <dd class="font-medium tabular-nums">{{ formatBytes(props.policy.max_size) }}</dd>
+                <dd class="font-medium tabular-nums">
+                    {{ formatBytes(props.policy.max_size) }}
+                </dd>
             </div>
             <div v-else class="flex justify-between gap-3">
-                <dt class="text-slate-500 dark:text-slate-400">Maximum length</dt>
-                <dd class="font-medium tabular-nums">{{ props.policy.max_length?.toLocaleString() }} characters</dd>
+                <dt class="text-slate-500 dark:text-slate-400">
+                    Maximum length
+                </dt>
+                <dd class="font-medium tabular-nums">
+                    {{ props.policy.max_length?.toLocaleString() }} characters
+                </dd>
             </div>
-            <div v-if="props.type === 'file'" class="flex justify-between gap-3">
+            <div
+                v-if="props.type === 'file'"
+                class="flex justify-between gap-3"
+            >
                 <dt class="text-slate-500 dark:text-slate-400">On threat</dt>
-                <dd class="font-medium capitalize">{{ props.policy.on_threat }}</dd>
+                <dd class="font-medium capitalize">
+                    {{ props.policy.on_threat }}
+                </dd>
             </div>
             <div v-if="props.type === 'file'">
-                <dt class="mb-1 text-slate-500 dark:text-slate-400">Allowed extensions</dt>
+                <dt class="mb-1 text-slate-500 dark:text-slate-400">
+                    Allowed extensions
+                </dt>
                 <dd class="flex flex-wrap gap-1">
                     <span
                         v-for="extension in props.policy.extensions"
@@ -183,31 +207,68 @@ const inputClass =
         <!-- Editor -->
         <form v-else class="mt-4 space-y-3" @submit.prevent="submit">
             <label class="block">
-                <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Label</span>
+                <span
+                    class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >Label</span
+                >
                 <input v-model="form.label" type="text" :class="inputClass" />
             </label>
 
             <label v-if="props.type === 'file'" class="block">
-                <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Maximum size (MB) — ceiling {{ formatBytes(props.limits.maxSizeCeiling) }}
+                <span
+                    class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                >
+                    Maximum size (MB) — ceiling
+                    {{ formatBytes(props.limits.maxSizeCeiling) }}
                 </span>
-                <input v-model.number="sizeMb" type="number" min="0.001" step="0.5" :class="inputClass" />
-                <span v-if="form.errors.max_size" class="mt-1 block text-xs text-red-600">{{ form.errors.max_size }}</span>
+                <input
+                    v-model.number="sizeMb"
+                    type="number"
+                    min="0.001"
+                    step="0.5"
+                    :class="inputClass"
+                />
+                <span
+                    v-if="form.errors.max_size"
+                    class="mt-1 block text-xs text-red-600"
+                    >{{ form.errors.max_size }}</span
+                >
             </label>
 
             <label v-else class="block">
-                <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Maximum length</span>
-                <input v-model.number="form.max_length" type="number" min="1" :class="inputClass" />
-                <span v-if="form.errors.max_length" class="mt-1 block text-xs text-red-600">{{ form.errors.max_length }}</span>
+                <span
+                    class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >Maximum length</span
+                >
+                <input
+                    v-model.number="form.max_length"
+                    type="number"
+                    min="1"
+                    :class="inputClass"
+                />
+                <span
+                    v-if="form.errors.max_length"
+                    class="mt-1 block text-xs text-red-600"
+                    >{{ form.errors.max_length }}</span
+                >
             </label>
 
             <template v-if="props.type === 'file'">
                 <label class="block">
-                    <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                    <span
+                        class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >
                         Allowed extensions (comma separated)
                     </span>
-                    <textarea v-model="form.extensions" rows="2" :class="inputClass" />
-                    <span v-if="form.errors.extensions" class="mt-1 block text-xs text-red-600">
+                    <textarea
+                        v-model="form.extensions"
+                        rows="2"
+                        :class="inputClass"
+                    />
+                    <span
+                        v-if="form.errors.extensions"
+                        class="mt-1 block text-xs text-red-600"
+                    >
                         {{ form.errors.extensions }}
                     </span>
                 </label>
@@ -218,30 +279,50 @@ const inputClass =
                 >
                     <Icon name="alert" :size="13" class="mt-0.5 shrink-0" />
                     <span>
-                        <strong>.{{ forbiddenTyped.join(', .') }}</strong> are server-executable and cannot be
-                        allowed from here. They are rejected on save — change
-                        <span class="font-mono">forbidden_extensions</span> in config if you truly intend it.
+                        <strong>.{{ forbiddenTyped.join(', .') }}</strong> are
+                        server-executable and cannot be allowed from here. They
+                        are rejected on save — change
+                        <span class="font-mono">forbidden_extensions</span> in
+                        config if you truly intend it.
                     </span>
                 </p>
 
                 <label class="block">
-                    <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
-                        Allowed MIME types (comma separated, blank = derive from extensions)
+                    <span
+                        class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                    >
+                        Allowed MIME types (comma separated, blank = derive from
+                        extensions)
                     </span>
-                    <textarea v-model="form.mime_types" rows="2" :class="inputClass" />
+                    <textarea
+                        v-model="form.mime_types"
+                        rows="2"
+                        :class="inputClass"
+                    />
                 </label>
 
                 <label class="block">
-                    <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Failure behaviour</span>
+                    <span
+                        class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                        >Failure behaviour</span
+                    >
                     <select v-model="form.on_threat" :class="inputClass">
-                        <option value="quarantine">Quarantine — keep the file for review</option>
-                        <option value="reject">Reject — refuse and keep nothing</option>
+                        <option value="quarantine">
+                            Quarantine — keep the file for review
+                        </option>
+                        <option value="reject">
+                            Reject — refuse and keep nothing
+                        </option>
                     </select>
                 </label>
             </template>
 
             <fieldset>
-                <legend class="mb-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">Checks</legend>
+                <legend
+                    class="mb-1.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                >
+                    Checks
+                </legend>
                 <div class="grid grid-cols-2 gap-1.5">
                     <label
                         v-for="(enabled, key) in form.checks"
@@ -257,15 +338,23 @@ const inputClass =
                     class="mt-2 flex items-start gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
                 >
                     <Icon name="alert" :size="13" class="mt-0.5 shrink-0" />
-                    With the malware check off, files under this policy are never sent to the engine.
+                    With the malware check off, files under this policy are
+                    never sent to the engine.
                 </p>
             </fieldset>
 
             <label class="block">
-                <span class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                <span
+                    class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300"
+                >
                     Note for the audit log
                 </span>
-                <input v-model="form.note" type="text" placeholder="Why this change?" :class="inputClass" />
+                <input
+                    v-model="form.note"
+                    type="text"
+                    placeholder="Why this change?"
+                    :class="inputClass"
+                />
             </label>
 
             <div class="flex justify-end gap-2 pt-1">

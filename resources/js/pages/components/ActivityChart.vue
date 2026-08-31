@@ -12,8 +12,12 @@ const label = (bucket: string): string => bucket.slice(-5).replace(':00', 'h');
 </script>
 
 <template>
-    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+    <div
+        class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+    >
+        <p
+            class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400"
+        >
             Scan volume
         </p>
 
@@ -50,17 +54,21 @@ const label = (bucket: string): string => bucket.slice(-5).replace(':00', 'h');
                 <div
                     class="w-full bg-slate-300 group-hover:bg-slate-400 dark:bg-slate-700 dark:group-hover:bg-slate-600"
                     :class="point.threats > 0 ? '' : 'rounded-t'"
-                    :style="{ height: `${((point.total - point.threats) / max) * 100}%` }"
+                    :style="{
+                        height: `${((point.total - point.threats) / max) * 100}%`,
+                    }"
                 />
             </div>
         </div>
 
         <div
             v-if="props.points.length > 1"
-            class="mt-2 flex justify-between text-[10px] tabular-nums text-slate-400 dark:text-slate-600"
+            class="mt-2 flex justify-between text-[10px] text-slate-400 tabular-nums dark:text-slate-600"
         >
             <span>{{ label(props.points[0].bucket) }}</span>
-            <span>{{ label(props.points[props.points.length - 1].bucket) }}</span>
+            <span>{{
+                label(props.points[props.points.length - 1].bucket)
+            }}</span>
         </div>
     </div>
 </template>

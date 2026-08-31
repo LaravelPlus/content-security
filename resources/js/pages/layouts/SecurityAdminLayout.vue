@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import Icon, { type IconName } from '../components/Icon.vue';
+import { computed, ref, watch } from 'vue';
+import Icon from '../components/Icon.vue';
+import type { IconName } from '../components/Icon.vue';
 import { useConsole } from '../composables/useConsole';
 
 const { shared, route } = useConsole();
@@ -27,7 +28,9 @@ const current = computed(() => page.url.split('?')[0].replace(/\/$/, ''));
 const isActive = (path: string): boolean => {
     const target = route(path).replace(/\/$/, '');
 
-    return path === '' ? current.value === target : current.value.startsWith(target);
+    return path === ''
+        ? current.value === target
+        : current.value.startsWith(target);
 };
 
 const sidebarOpen = ref(false);
@@ -44,7 +47,9 @@ const flash = computed(
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
+    <div
+        class="min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100"
+    >
         <!-- Drawer backdrop, small screens only. -->
         <div
             v-if="sidebarOpen"
@@ -58,13 +63,17 @@ const flash = computed(
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full',
             ]"
         >
-            <div class="flex h-16 items-center gap-2.5 border-b border-slate-100 px-5 dark:border-slate-800">
+            <div
+                class="flex h-16 items-center gap-2.5 border-b border-slate-100 px-5 dark:border-slate-800"
+            >
                 <span
                     class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
                 >
                     <Icon name="shield" :size="16" />
                 </span>
-                <span class="truncate text-sm font-bold leading-tight">{{ shared.brand }}</span>
+                <span class="truncate text-sm leading-tight font-bold">{{
+                    shared.brand
+                }}</span>
             </div>
 
             <nav class="flex-1 space-y-0.5 overflow-y-auto p-2.5">
@@ -114,7 +123,9 @@ const flash = computed(
                     </button>
 
                     <div class="min-w-0 flex-1">
-                        <h1 class="truncate text-base font-semibold tracking-tight">
+                        <h1
+                            class="truncate text-base font-semibold tracking-tight"
+                        >
                             <slot name="title" />
                         </h1>
                         <p
