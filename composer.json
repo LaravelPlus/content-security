@@ -1,0 +1,76 @@
+{
+    "name": "laravelplus/content-security",
+    "description": "Defense-in-depth content security for Laravel: malware scanning, MIME/magic-byte verification, archive/image/PDF inspection, HTML sanitization, URL/SSRF checks, quarantine, audit trail and a Vue 3 security console.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "security",
+        "clamav",
+        "malware",
+        "upload",
+        "sanitizer",
+        "quarantine",
+        "inertia",
+        "vue"
+    ],
+    "authors": [
+        {
+            "name": "Nejc Cotič",
+            "email": "nejc.cotic@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.5",
+        "ext-fileinfo": "*",
+        "ext-json": "*",
+        "laravel/framework": "^13.0",
+        "symfony/html-sanitizer": "^7.0|^8.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.27",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.0"
+    },
+    "suggest": {
+        "ext-zip": "Required to inspect ZIP archives (zip bombs, path traversal, embedded executables).",
+        "ext-gd": "Required to validate and re-encode images.",
+        "inertiajs/inertia-laravel": "Required for the /admin/content-security console."
+    },
+    "autoload": {
+        "psr-4": {
+            "LaravelPlus\\ContentSecurity\\": "src/",
+            "LaravelPlus\\ContentSecurity\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LaravelPlus\\ContentSecurity\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LaravelPlus\\ContentSecurity\\ContentSecurityServiceProvider"
+            ],
+            "aliases": {
+                "ContentSecurity": "LaravelPlus\\ContentSecurity\\Facades\\ContentSecurity"
+            }
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "analyse": "phpstan analyse",
+        "lint": "pint --parallel",
+        "lint:check": "pint --parallel --test"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
