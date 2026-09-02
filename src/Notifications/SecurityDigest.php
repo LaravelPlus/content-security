@@ -40,7 +40,7 @@ final class SecurityDigest extends Notification
 
         return (new MailMessage)
             ->subject((string) $subject)
-            ->view('content-security::mail.digest', [
+            ->markdown('content-security::mail.digest', [
                 'report' => $this->report,
                 'consoleUrl' => $this->consoleUrl(),
             ]);
