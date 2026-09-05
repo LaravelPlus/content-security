@@ -7,6 +7,7 @@ namespace LaravelPlus\ContentSecurity\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use LaravelPlus\ContentSecurity\Actions\ScanFile;
+use LaravelPlus\ContentSecurity\ContentSecurity;
 use LaravelPlus\ContentSecurity\Domain\File\FileReference;
 use LaravelPlus\ContentSecurity\Models\SecurityScan;
 use Throwable;
@@ -37,11 +38,12 @@ final class ScanDiskCommand extends Command
         {--limit=0 : Stop after this many scans (0 = no limit)}
         {--rescan : Scan files that already have a scan on file}
         {--no-quarantine : Report findings without copying anything to quarantine}
-        {--dry-run : List what would be scanned, scan nothing}';
+        {--dry-run : List what would be scanned, scan nothing}
+        {--force : Run even when the malware engine reports itself offline}';
 
     protected $description = 'Scan files already stored on a disk that no scan has seen yet.';
 
-    public function handle(ScanFile $scanner): int
+    public function handle(ScanFile $scanner, ContentSecurity $security): int
     {
         $disk = (string) $this->argument('disk');
         $prefix = (string) ($this->option('path') ?? '');
@@ -82,6 +84,21 @@ final class ScanDiskCommand extends Command
 
         $seen = $this->alreadyScanned($files);
         $rescan = (bool) $this->option('rescan');
+
+        $pending = $rescan
+            ? count($files)
+            : count(array_filter($files, static fn (string $path): bool => ! isset($seen[$path])));
+
+        // Neuspel pregled velja za nepreverjeno datoteko in gre v karanteno --
+        // pravilno pri enem nalaganju, usodno pri sprehodu cez cel disk: en
+        // izpad demona bi zapisal karanteno za vsako datoteko posebej. Zato se
+        // stanje pogleda, preden se karkoli prenese. Prazen disk in disk, ki je
+        // ze ves pregledan, demona ne potrebujeta.
+        if ($pending > 0 && ! $dryRun && ! $this->option('force') && ! $this->engineIsUp($security)) {
+            $this->components->error('The malware engine is offline — refusing to walk the disk. Fix it, or pass --force.');
+
+            return self::FAILURE;
+        }
 
         $scanned = $skipped = $clean = $flagged = $failed = 0;
 
@@ -157,6 +174,20 @@ final class ScanDiskCommand extends Command
         // Najdba ni napaka ukaza: ukaz je opravil svoje prav takrat, ko jo
         // najde. Rdec izhod prihranimo za disk, ki ga ni bilo mogoce prebrati.
         return self::SUCCESS;
+    }
+
+    /**
+     * Ali je dejavni pregledovalnik dosegljiv.
+     */
+    private function engineIsUp(ContentSecurity $security): bool
+    {
+        foreach ($security->health() as $health) {
+            if ($health->active && $health->online) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

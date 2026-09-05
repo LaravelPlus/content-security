@@ -140,3 +140,42 @@ it('can leave derived variants alone', function (): void {
     // cisto izpeljanko, prenos vsake posebej pa je placan trikrat.
     expect(SecurityScan::query()->pluck('original_filename')->all())->toBe(['logos/a.webp']);
 });
+
+it('refuses to walk the disk when the engine is offline', function (): void {
+    useDiskScanner(FakeMalwareScanner::unavailable());
+    seedDisk(2);
+
+    // Neuspel pregled velja za nepreverjeno datoteko in gre v karanteno --
+    // pravilno pri enem nalaganju, usodno pri sprehodu cez cel disk.
+    $this->artisan('content-security:scan-disk uploads')->assertFailed();
+
+    expect(SecurityScan::query()->count())->toBe(0);
+});
+
+it('walks anyway when forced', function (): void {
+    useDiskScanner(FakeMalwareScanner::unavailable());
+    seedDisk(1);
+
+    $this->artisan('content-security:scan-disk uploads --force')->assertSuccessful();
+
+    expect(SecurityScan::query()->count())->toBe(1);
+});
+
+it('lists on a dry run without asking the engine anything', function (): void {
+    useDiskScanner(FakeMalwareScanner::unavailable());
+    seedDisk(1);
+
+    $this->artisan('content-security:scan-disk uploads --dry-run')->assertSuccessful();
+});
+
+it('does not need the engine when everything is already scanned', function (): void {
+    useDiskScanner(FakeMalwareScanner::clean());
+    seedDisk(1);
+
+    $this->artisan('content-security:scan-disk uploads')->assertSuccessful();
+
+    // Drugi zagon nima kaj prenasati, zato mu je stanje demona vseeno.
+    useDiskScanner(FakeMalwareScanner::unavailable());
+
+    $this->artisan('content-security:scan-disk uploads')->assertSuccessful();
+});
