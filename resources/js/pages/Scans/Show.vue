@@ -206,6 +206,8 @@ const details = computed(() => {
                                 :src="preview.url"
                                 :alt="props.scan.subject"
                                 class="max-h-40 w-56 rounded-md border border-slate-200 bg-[repeating-conic-gradient(#f1f5f9_0%_25%,white_0%_50%)] bg-[length:16px_16px] object-contain dark:border-slate-800"
+                                loading="lazy"
+                                decoding="async"
                             />
                         </a>
                         <span
