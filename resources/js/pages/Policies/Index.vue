@@ -84,9 +84,7 @@ const checkLabels: Record<string, string> = {
             <div
                 class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
             >
-                <p
-                    class="text-[11px] tracking-wider text-slate-500 uppercase dark:text-slate-400"
-                >
+                <p class="text-xs text-slate-500 dark:text-slate-400">
                     Scanning
                 </p>
                 <p
@@ -103,9 +101,7 @@ const checkLabels: Record<string, string> = {
             <div
                 class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
             >
-                <p
-                    class="text-[11px] tracking-wider text-slate-500 uppercase dark:text-slate-400"
-                >
+                <p class="text-xs text-slate-500 dark:text-slate-400">
                     Fail closed
                 </p>
                 <p
@@ -122,9 +118,7 @@ const checkLabels: Record<string, string> = {
             <div
                 class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
             >
-                <p
-                    class="text-[11px] tracking-wider text-slate-500 uppercase dark:text-slate-400"
-                >
+                <p class="text-xs text-slate-500 dark:text-slate-400">
                     Malware driver
                 </p>
                 <p class="mt-1 font-mono text-sm">
@@ -134,9 +128,7 @@ const checkLabels: Record<string, string> = {
             <div
                 class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
             >
-                <p
-                    class="text-[11px] tracking-wider text-slate-500 uppercase dark:text-slate-400"
-                >
+                <p class="text-xs text-slate-500 dark:text-slate-400">
                     Quarantine disk
                 </p>
                 <p class="mt-1 font-mono text-sm">
@@ -202,7 +194,7 @@ const checkLabels: Record<string, string> = {
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <p
-                        class="mb-1.5 text-[11px] tracking-wider text-slate-500 uppercase dark:text-slate-400"
+                        class="mb-1.5 text-xs text-slate-500 dark:text-slate-400"
                     >
                         Allowed tags
                     </p>
@@ -219,7 +211,7 @@ const checkLabels: Record<string, string> = {
                 <div class="space-y-3">
                     <div>
                         <p
-                            class="mb-1.5 text-[11px] tracking-wider text-slate-500 uppercase dark:text-slate-400"
+                            class="mb-1.5 text-xs text-slate-500 dark:text-slate-400"
                         >
                             Allowed URL schemes
                         </p>

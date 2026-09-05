@@ -100,13 +100,30 @@ const tone = computed(() => {
             </div>
         </dl>
 
-        <p
+        <div
             v-if="props.health.error && props.health.is_problem"
-            class="mt-3 flex items-start gap-1.5 rounded border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+            class="mt-3 rounded border border-red-200 bg-red-50 px-2.5 py-2 text-xs text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
         >
-            <Icon name="alert" :size="13" class="mt-0.5 shrink-0" />
-            {{ props.health.error }}
-        </p>
+            <p class="flex items-start gap-1.5">
+                <Icon name="alert" :size="13" class="mt-0.5 shrink-0" />
+                <span class="font-mono break-all">{{
+                    props.health.error
+                }}</span>
+            </p>
+
+            <!--
+                Napaka pove, kaj se ne odziva; ne pove pa, kaj to pomeni za
+                aplikacijo in kaj naj clovek naredi. Oboje sodi sem: to je
+                zaslon, na katerega pride prav zaradi tega.
+            -->
+            <p
+                class="mt-2 border-t border-red-200/70 pt-2 dark:border-red-500/20"
+            >
+                While the active engine is down, uploads are refused rather than
+                stored unproven. Start the daemon and reload this page; the scan
+                pipeline needs no restart.
+            </p>
+        </div>
 
         <p
             v-else-if="props.health.error"
