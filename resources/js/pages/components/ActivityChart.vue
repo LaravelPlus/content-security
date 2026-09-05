@@ -37,7 +37,7 @@ const label = (bucket: string): string => bucket.slice(-5).replace(':00', 'h');
             <div
                 v-for="point in props.points"
                 :key="point.bucket"
-                class="group relative flex max-w-12 flex-1 flex-col justify-end"
+                class="group relative flex flex-1 flex-col justify-end"
                 :title="`${point.bucket}: ${point.total} scans, ${point.threats} with findings`"
             >
                 <!-- Findings stack on top of the clean count rather than
@@ -54,6 +54,13 @@ const label = (bucket: string): string => bucket.slice(-5).replace(':00', 'h');
                     :style="{
                         height: `${((point.total - point.threats) / max) * 100}%`,
                     }"
+                />
+
+                <!-- Vedro brez pregleda je izmerjena nicla: tanka crta pove, da
+                     smo tam merili, prazen prostor bi bral kot manjkajoc podatek. -->
+                <div
+                    v-if="point.total === 0"
+                    class="h-px w-full bg-slate-200 dark:bg-slate-800"
                 />
             </div>
         </div>

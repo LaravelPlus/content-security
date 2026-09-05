@@ -2,6 +2,8 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import ActivityChart from './components/ActivityChart.vue';
+import OutcomeBar from './components/OutcomeBar.vue';
+import TypeBreakdown from './components/TypeBreakdown.vue';
 import Icon from './components/Icon.vue';
 import type { IconName } from './components/Icon.vue';
 import ScanTable from './components/ScanTable.vue';
@@ -32,6 +34,9 @@ const props = defineProps<{
     recentScans: Scan[];
     recentThreats: Threat[];
     timeline: TimelinePoint[];
+    outcomes: Array<{ key: string; label: string; value: number }>;
+    fileTypes: Array<{ label: string; value: number }>;
+    durations: { median: number; p95: number; slowest: number; count: number };
 }>();
 
 const { route } = useConsole();
@@ -269,9 +274,58 @@ const setWindow = (hours: number): void => {
             </dl>
         </section>
 
-        <!-- 4. Kdaj se je delalo. -->
+        <!-- 4a. Kako se pregledi koncajo in kaj se nalaga. -->
+        <div class="mt-6 grid gap-5 lg:grid-cols-2">
+            <section
+                class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+            >
+                <h2 class="text-sm font-semibold">How scans ended</h2>
+
+                <OutcomeBar
+                    v-if="props.outcomes.length > 0"
+                    :outcomes="props.outcomes"
+                    class="mt-3"
+                />
+                <p
+                    v-else
+                    class="mt-6 mb-2 text-center text-sm text-slate-400 dark:text-slate-500"
+                >
+                    Nothing was scanned in this window.
+                </p>
+            </section>
+
+            <section
+                class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+            >
+                <div class="flex items-baseline justify-between gap-3">
+                    <h2 class="text-sm font-semibold">What was uploaded</h2>
+                    <p
+                        v-if="props.durations.count > 0"
+                        class="text-xs text-slate-500 dark:text-slate-400"
+                    >
+                        typical {{ formatDuration(props.durations.median) }} ·
+                        slowest 5% over
+                        {{ formatDuration(props.durations.p95) }}
+                    </p>
+                </div>
+
+                <TypeBreakdown
+                    v-if="props.fileTypes.length > 0"
+                    :types="props.fileTypes"
+                    class="mt-3"
+                />
+                <p
+                    v-else
+                    class="mt-6 mb-2 text-center text-sm text-slate-400 dark:text-slate-500"
+                >
+                    No file was scanned in this window.
+                </p>
+            </section>
+        </div>
+
+        <!-- 4b. Kdaj se je delalo. -->
         <section
-            class="mt-6 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+            class="mt-5 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
         >
             <div class="flex items-baseline justify-between gap-3">
                 <h2 class="text-sm font-semibold">Scan volume</h2>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\Http\Controllers;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -64,6 +65,11 @@ final class DashboardController extends Controller
                 ])
                 ->all(),
             'timeline' => $this->timeline($hours),
+            // Kako se pregledi koncajo, kaj se nalaga in kako dolgo traja --
+            // troje, ki ga stevilke same ne povedo: delez, sestava in rep.
+            'outcomes' => $this->outcomes($statistics),
+            'fileTypes' => $this->fileTypes($hours),
+            'durations' => $this->durations($hours),
         ]);
     }
 
@@ -140,6 +146,87 @@ final class DashboardController extends Controller
     }
 
     /**
+     * Izidi pregledov kot deli celote. Stanja so rezervirane barve in gredo
+     * vedno z oznako -- barva sama ni podatek za tistega, ki je ne loci.
+     *
+     * @param  array<string, int|float>  $statistics
+     * @return list<array{key: string, label: string, value: int}>
+     */
+    private function outcomes(array $statistics): array
+    {
+        $rows = [
+            ['key' => 'clean', 'label' => 'Clean', 'value' => (int) ($statistics['clean'] ?? 0)],
+            ['key' => 'suspicious', 'label' => 'Suspicious', 'value' => (int) ($statistics['suspicious'] ?? 0)],
+            ['key' => 'infected', 'label' => 'Malware', 'value' => (int) ($statistics['infected'] ?? 0)],
+            ['key' => 'failed', 'label' => 'Failed', 'value' => (int) ($statistics['failed'] ?? 0)],
+        ];
+
+        return array_values(array_filter($rows, static fn (array $row): bool => $row['value'] > 0));
+    }
+
+    /**
+     * Kaj se dejansko nalaga. Rep se zdruzi v "Other": deveta rezina je barva,
+     * ki je nihce ne prebere.
+     *
+     * @return list<array{label: string, value: int}>
+     */
+    private function fileTypes(int $hours): array
+    {
+        $rows = SecurityScan::query()
+            ->where('type', 'file')
+            ->where('created_at', '>=', now()->subHours($hours))
+            ->selectRaw('coalesce(detected_mime, declared_mime) as mime, count(*) as total')
+            ->groupBy('mime')
+            ->orderByDesc('total')
+            ->get();
+
+        $top = $rows->take(5)->map(static fn ($row): array => [
+            'label' => (string) ($row->getAttribute('mime') ?: 'unknown'),
+            'value' => (int) $row->getAttribute('total'),
+        ])->values()->all();
+
+        $rest = (int) $rows->skip(5)->sum(static fn ($row): int => (int) $row->getAttribute('total'));
+
+        if ($rest > 0) {
+            $top[] = ['label' => 'Other', 'value' => $rest];
+        }
+
+        return $top;
+    }
+
+    /**
+     * Kako dolgo traja pregled. Povprecje samo skriva rep, zato gresta z njim
+     * se mediana in 95. percentil -- tisto, kar cuti clovek, ki caka.
+     *
+     * @return array{median: int, p95: int, slowest: int, count: int}
+     */
+    private function durations(int $hours): array
+    {
+        $values = SecurityScan::query()
+            ->where('created_at', '>=', now()->subHours($hours))
+            ->where('duration_ms', '>', 0)
+            ->orderBy('duration_ms')
+            ->pluck('duration_ms')
+            ->map(static fn ($value): int => (int) $value)
+            ->values();
+
+        if ($values->isEmpty()) {
+            return ['median' => 0, 'p95' => 0, 'slowest' => 0, 'count' => 0];
+        }
+
+        $at = static fn (float $quantile): int => (int) $values[
+            min($values->count() - 1, (int) floor($quantile * ($values->count() - 1)))
+        ];
+
+        return [
+            'median' => $at(0.5),
+            'p95' => $at(0.95),
+            'slowest' => (int) $values->last(),
+            'count' => $values->count(),
+        ];
+    }
+
+    /**
      * Scans per hour (or per day over a long window), for the sparkline.
      *
      * @return list<array{bucket: string, total: int, threats: int}>
@@ -187,6 +274,41 @@ final class DashboardController extends Controller
 
         unset($format);
 
-        return $rows;
+        return $this->fillBuckets($rows, $hours, $daily);
+    }
+
+    /**
+     * Dopolni prazna vedra.
+     *
+     * Poizvedba vrne le tiste ure oziroma dneve, ko se je kaj zgodilo, in graf
+     * je zato pokazal tri stolpce na levi in dve tretjini prazne sirine --
+     * kot da o preostanku ne vemo nicesar. Dan brez pregleda je izmerjena
+     * nicla in tako mora tudi izgledati.
+     *
+     * @param  list<array{bucket: string, total: int, threats: int}>  $rows
+     * @return list<array{bucket: string, total: int, threats: int}>
+     */
+    private function fillBuckets(array $rows, int $hours, bool $daily): array
+    {
+        $known = [];
+
+        foreach ($rows as $row) {
+            $known[$row['bucket']] = $row;
+        }
+
+        $cursor = $daily
+            ? CarbonImmutable::now()->subHours($hours)->startOfDay()
+            : CarbonImmutable::now()->subHours($hours)->startOfHour();
+        $end = CarbonImmutable::now();
+        $format = $daily ? 'Y-m-d' : 'Y-m-d H:00';
+        $filled = [];
+
+        while ($cursor <= $end) {
+            $bucket = $cursor->format($format);
+            $filled[] = $known[$bucket] ?? ['bucket' => $bucket, 'total' => 0, 'threats' => 0];
+            $cursor = $daily ? $cursor->addDay() : $cursor->addHour();
+        }
+
+        return $filled;
     }
 }
