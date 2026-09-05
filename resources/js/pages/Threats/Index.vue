@@ -11,6 +11,7 @@ import {
     formatNumber,
     useConsole,
 } from '../composables/useConsole';
+import { explainThreat } from '../explanations';
 import SecurityAdminLayout from '../layouts/SecurityAdminLayout.vue';
 import type { AggregatedThreat, Paginated } from '../types';
 
@@ -142,8 +143,21 @@ const inputClass =
                             :key="`${threat.name}-${threat.level}-${threat.source}`"
                             class="hover:bg-slate-50 dark:hover:bg-slate-800/40"
                         >
-                            <td class="px-4 py-2.5 font-mono text-xs">
-                                {{ threat.name }}
+                            <td class="px-4 py-2.5">
+                                <p class="font-mono text-xs">
+                                    {{ threat.name }}
+                                </p>
+                                <!-- Ime podpisa je za tistega, ki ga ni pisal, samo niz. -->
+                                <p
+                                    class="mt-0.5 max-w-md text-xs text-slate-500 dark:text-slate-400"
+                                >
+                                    {{
+                                        explainThreat(
+                                            threat.name,
+                                            threat.source,
+                                        )
+                                    }}
+                                </p>
                             </td>
                             <td class="px-4 py-2.5">
                                 <ThreatBadge :level="threat.level" />

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import EmptyState from '../components/EmptyState.vue';
 import Icon from '../components/Icon.vue';
@@ -14,6 +14,12 @@ import type { Paginated, Scan } from '../types';
 const props = defineProps<{
     items: Paginated<Scan>;
     retentionDays: number;
+    summary: {
+        count: number;
+        bytes: number;
+        oldest_at: string | null;
+        next_deletion_at: string | null;
+    };
 }>();
 
 const { route } = useConsole();
@@ -63,6 +69,27 @@ const confirmDelete = (): void => {
     });
 };
 
+/*
+ * Karantena je zaloga, ne dnevnik: prvo vprasanje je, koliko tega je in kdaj
+ * gre samo od sebe -- sele drugo, katera datoteka je katera.
+ */
+const summary = computed(() => [
+    { label: 'Files held', value: String(props.summary.count) },
+    { label: 'Space used', value: formatBytes(props.summary.bytes) },
+    {
+        label: 'Oldest',
+        value: props.summary.oldest_at
+            ? formatDate(props.summary.oldest_at)
+            : '—',
+    },
+    {
+        label: `Next auto-delete (after ${props.retentionDays} days)`,
+        value: props.summary.next_deletion_at
+            ? formatDate(props.summary.next_deletion_at)
+            : '—',
+    },
+]);
+
 const inputClass =
     'w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-slate-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100';
 </script>
@@ -76,6 +103,24 @@ const inputClass =
             Files held out of normal storage. Deleted automatically after
             {{ props.retentionDays }} days.
         </template>
+
+        <section
+            v-if="props.items.data.length > 0"
+            class="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+        >
+            <dl
+                class="grid divide-y divide-slate-100 sm:grid-cols-4 sm:divide-x sm:divide-y-0 dark:divide-slate-800"
+            >
+                <div v-for="row in summary" :key="row.label" class="px-4 py-3">
+                    <dt class="text-xs text-slate-500 dark:text-slate-400">
+                        {{ row.label }}
+                    </dt>
+                    <dd class="mt-1 text-sm font-semibold tabular-nums">
+                        {{ row.value }}
+                    </dd>
+                </div>
+            </dl>
+        </section>
 
         <EmptyState
             v-if="props.items.data.length === 0"

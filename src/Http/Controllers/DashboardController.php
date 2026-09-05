@@ -34,6 +34,14 @@ final class DashboardController extends Controller
 
         return $this->render($request, 'Dashboard', [
             'statistics' => $statistics,
+            // Kaj caka cloveka, ni vprasanje izbranega okna: datoteka v
+            // karanteni caka tudi, ce je prisla pred tednom dni. Okno velja za
+            // promet, stanje pa se steje celo.
+            'waiting' => [
+                'threats' => SecurityThreat::query()->count(),
+                'quarantined' => SecurityScan::query()->whereNotNull('quarantine_path')->count(),
+                'failed' => SecurityScan::query()->where('status', ScanStatus::Failed)->count(),
+            ],
             'hours' => $hours,
             'health' => ScannerHealthResource::collection($health)->resolve(),
             'posture' => $this->posture($statistics, $health),

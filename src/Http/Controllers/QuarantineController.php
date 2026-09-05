@@ -6,6 +6,7 @@ namespace LaravelPlus\ContentSecurity\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Response as InertiaResponse;
@@ -29,9 +30,23 @@ final class QuarantineController extends Controller
             ->paginate($this->perPage($request))
             ->withQueryString();
 
+        $retentionDays = (int) config('content-security.storage.retention_days', 30);
+        $held = SecurityScan::query()->quarantined();
+        $oldest = (clone $held)->min('created_at');
+
         return $this->render($request, 'Quarantine/Index', [
             'items' => ScanResource::collection($items)->response()->getData(true),
-            'retentionDays' => (int) config('content-security.storage.retention_days', 30),
+            'retentionDays' => $retentionDays,
+            // Karantena je zaloga, ne dnevnik: clovek hoce vedeti, koliko je
+            // tega, koliko prostora drzi in kdaj gre najstarejse samo od sebe.
+            'summary' => [
+                'count' => (clone $held)->count(),
+                'bytes' => (int) (clone $held)->sum('file_size'),
+                'oldest_at' => $oldest === null ? null : Carbon::parse($oldest)->toIso8601String(),
+                'next_deletion_at' => $oldest === null
+                    ? null
+                    : Carbon::parse($oldest)->addDays($retentionDays)->toIso8601String(),
+            ],
         ]);
     }
 

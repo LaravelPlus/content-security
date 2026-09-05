@@ -14,6 +14,7 @@ import {
 import SecurityAdminLayout from '../layouts/SecurityAdminLayout.vue';
 import type { CheckOutcome, Scan, ScanEvent } from '../types';
 import type { IconName } from '../components/Icon.vue';
+import { checkExplanations, explainThreat } from '../explanations';
 
 const props = defineProps<{ scan: Scan; timeline: ScanEvent[] }>();
 
@@ -45,22 +46,6 @@ const checks = computed(() => props.scan.checks ?? []);
  * zabelezilo: napaka, ce je pregled spodletel, sicer pa najdba in podatki, ki
  * jo utemeljujejo.
  */
-const checkExplanations: Record<string, string> = {
-    size: 'The file is larger than the policy allows.',
-    extension:
-        'The extension is not on the policy list, or the name carries more than one.',
-    mime: 'The declared type and the detected type disagree.',
-    magic_bytes: 'The first bytes do not match the type the name claims.',
-    archive: 'The archive holds something the policy refuses.',
-    image: 'The image could not be decoded, or carries data after its end.',
-    pdf: 'The document carries active content (scripts, embedded files, launch actions).',
-    malware:
-        'The malware engine reported a signature match, or could not answer.',
-    length: 'The text is longer than the policy allows.',
-    suspicious: 'The text carries patterns the policy treats as an attack.',
-    html: 'The markup carried something the sanitizer removed.',
-    urls: 'A link points somewhere the policy refuses.',
-};
 
 function threatsFor(check: string) {
     return (props.scan.threats ?? []).filter(
