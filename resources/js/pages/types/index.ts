@@ -55,6 +55,8 @@ export interface Scan {
     duration_ms: number;
     threat_count: number;
     quarantined: boolean;
+    /** Kaj je bilo pregledano: slika s povezavo, vse drugo z ikono po tipu. */
+    preview?: { kind: 'image' | 'pdf' | 'text' | 'archive' | 'file'; url: string | null };
     created_at: string | null;
     completed_at: string | null;
     quarantine_path?: string | null;

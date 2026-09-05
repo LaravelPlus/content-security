@@ -45,6 +45,13 @@ final class EloquentScanRepository implements ScanRepository
                 'declared_mime' => $file?->declaredMime,
                 'file_size' => $file?->size(),
                 'checksum_sha256' => $file?->checksum(),
+                // Kje datoteka lezi -- zapisano samo takrat, kadar to sploh
+                // vemo (pregled diska). Nalozena datoteka je zacasna in po
+                // pregledu je ni vec, zato tam ostane prazno.
+                'metadata' => $file?->disk === null ? null : [
+                    'disk' => $file->disk,
+                    'disk_path' => $file->diskPath,
+                ],
                 'started_at' => now(),
             ],
         );
@@ -72,6 +79,9 @@ final class EloquentScanRepository implements ScanRepository
                     ?? $this->detectedMimeFromChecks($result),
                 'checksum_sha256' => $this->stringOrNull($metadata['checksum_sha256'] ?? null) ?? $scan->checksum_sha256,
                 'metadata' => $this->redact([
+                    // Kje datoteka lezi, prezivi zakljucek pregleda: brez tega
+                    // bi konzola vedela, da je slika cista, ne pa katera.
+                    ...array_intersect_key((array) $scan->metadata, array_flip(['disk', 'disk_path'])),
                     ...$metadata,
                     'checks' => array_map(
                         fn (array $check): array => [

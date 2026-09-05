@@ -12,7 +12,8 @@ import {
     useConsole,
 } from '../composables/useConsole';
 import SecurityAdminLayout from '../layouts/SecurityAdminLayout.vue';
-import type { Scan, ScanEvent } from '../types';
+import type { CheckOutcome, Scan, ScanEvent } from '../types';
+import type { IconName } from '../components/Icon.vue';
 
 const props = defineProps<{ scan: Scan; timeline: ScanEvent[] }>();
 
@@ -34,6 +35,88 @@ const checkLabels: Record<string, string> = {
 };
 
 const checks = computed(() => props.scan.checks ?? []);
+
+/*
+ * Zakaj je bilo nekaj oznaceno.
+ *
+ * Zaslon je doslej povedal, katero preverjanje je padlo, ne pa cesa je nasel
+ * -- clovek je nato ugibal, ali gre za nevarno datoteko ali za naso lastno
+ * konvencijo poimenovanja. Razlaga se sestavi iz tega, kar je preverjanje
+ * zabelezilo: napaka, ce je pregled spodletel, sicer pa najdba in podatki, ki
+ * jo utemeljujejo.
+ */
+const checkExplanations: Record<string, string> = {
+    size: 'The file is larger than the policy allows.',
+    extension:
+        'The extension is not on the policy list, or the name carries more than one.',
+    mime: 'The declared type and the detected type disagree.',
+    magic_bytes: 'The first bytes do not match the type the name claims.',
+    archive: 'The archive holds something the policy refuses.',
+    image: 'The image could not be decoded, or carries data after its end.',
+    pdf: 'The document carries active content (scripts, embedded files, launch actions).',
+    malware:
+        'The malware engine reported a signature match, or could not answer.',
+    length: 'The text is longer than the policy allows.',
+    suspicious: 'The text carries patterns the policy treats as an attack.',
+    html: 'The markup carried something the sanitizer removed.',
+    urls: 'A link points somewhere the policy refuses.',
+};
+
+function threatsFor(check: string) {
+    return (props.scan.threats ?? []).filter(
+        (threat) => threat.source === check,
+    );
+}
+
+/** Podatki preverjanja kot pari: kar je preverjanje izmerilo, v enakem jeziku. */
+function evidenceFor(
+    check: CheckOutcome,
+): Array<{ label: string; value: string }> {
+    return Object.entries(check.metadata ?? {})
+        .filter(
+            ([, value]) => value !== null && value !== '' && value !== false,
+        )
+        .map(([key, value]) => ({
+            label: key.replace(/_/g, ' '),
+            value: Array.isArray(value) ? value.join(', ') : String(value),
+        }));
+}
+
+const statusExplanation = computed<string | null>(() => {
+    switch (props.scan.status) {
+        case 'suspicious':
+            return 'Something about this file breaks the policy, but no malware signature matched. The checks below say what.';
+        case 'failed':
+            return 'A check could not complete, so the file is unproven rather than clean. The checks below carry the error.';
+        case 'infected':
+            return 'A malware signature matched. The findings below name it.';
+        case 'quarantined':
+            return 'A copy was taken into quarantine; the original was left where it was.';
+        default:
+            return null;
+    }
+});
+
+/*
+ * Kaj je bilo pregledano. Slika se pokaze, ker je "clean" ob imenu datoteke
+ * podatek brez obraza -- clovek na tem zaslonu hoce videti, o cem tece beseda.
+ * Vse drugo dobi ikono po svojem tipu; povezave ni, kadar datoteke ni vec
+ * (nalozena je bila zacasna) ali je disk ne zna ponuditi.
+ */
+const preview = computed(
+    () => props.scan.preview ?? { kind: 'file', url: null },
+);
+
+const previewIcon = computed<IconName>(() => {
+    const known: Record<string, IconName> = {
+        image: 'image',
+        pdf: 'pdf',
+        text: 'text',
+        archive: 'archive',
+    };
+
+    return known[preview.value.kind] ?? 'file';
+});
 
 const details = computed(() => {
     const rows: Array<{ label: string; value: string; mono?: boolean }> = [
@@ -111,8 +194,71 @@ const details = computed(() => {
             <Icon name="chevron-left" :size="13" /> All scans
         </Link>
 
+        <p
+            v-if="statusExplanation"
+            class="mb-4 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+        >
+            {{ statusExplanation }}
+        </p>
+
         <div class="grid gap-5 lg:grid-cols-3">
             <div class="space-y-5 lg:col-span-2">
+                <section
+                    class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <h2 class="mb-3 text-sm font-semibold">Content</h2>
+
+                    <div class="flex items-center gap-4">
+                        <a
+                            v-if="preview.kind === 'image' && preview.url"
+                            :href="preview.url"
+                            target="_blank"
+                            rel="noopener"
+                            class="shrink-0"
+                            title="Open the original"
+                        >
+                            <img
+                                :src="preview.url"
+                                :alt="props.scan.subject"
+                                class="max-h-40 w-56 rounded-md border border-slate-200 bg-[repeating-conic-gradient(#f1f5f9_0%_25%,white_0%_50%)] bg-[length:16px_16px] object-contain dark:border-slate-800"
+                            />
+                        </a>
+                        <span
+                            v-else
+                            class="grid size-20 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-800/50"
+                        >
+                            <Icon :name="previewIcon" :size="28" />
+                        </span>
+
+                        <div
+                            class="min-w-0 text-xs text-slate-500 dark:text-slate-400"
+                        >
+                            <p
+                                class="truncate font-medium text-slate-900 dark:text-slate-100"
+                            >
+                                {{ props.scan.subject }}
+                            </p>
+                            <p class="mt-1">
+                                {{
+                                    props.scan.detected_mime ??
+                                    props.scan.declared_mime ??
+                                    '—'
+                                }}
+                                <span v-if="props.scan.size">
+                                    · {{ formatBytes(props.scan.size) }}</span
+                                >
+                            </p>
+                            <p
+                                v-if="preview.kind === 'image' && !preview.url"
+                                class="mt-1 text-slate-400"
+                            >
+                                The file itself is gone — an upload is scanned
+                                before it is stored.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
                 <section
                     class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
                 >
@@ -151,57 +297,126 @@ const details = computed(() => {
                         <li
                             v-for="check in checks"
                             :key="check.check"
-                            class="flex items-center justify-between gap-3 py-2"
+                            class="py-2"
                         >
-                            <span class="flex min-w-0 items-center gap-2">
-                                <span
-                                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                                    :class="{
-                                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400':
-                                            check.status === 'clean' &&
-                                            !check.skipped,
-                                        'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500':
-                                            check.skipped,
-                                        'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400':
-                                            check.status === 'suspicious',
-                                        'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400':
-                                            check.status === 'infected' ||
-                                            check.status === 'failed',
-                                    }"
-                                >
-                                    <Icon
-                                        :name="
-                                            check.skipped
-                                                ? 'chevron-right'
-                                                : check.status === 'clean'
-                                                  ? 'check'
-                                                  : 'x'
-                                        "
-                                        :size="11"
-                                    />
+                            <div
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <span class="flex min-w-0 items-center gap-2">
+                                    <span
+                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                                        :class="{
+                                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400':
+                                                check.status === 'clean' &&
+                                                !check.skipped,
+                                            'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500':
+                                                check.skipped,
+                                            'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400':
+                                                check.status === 'suspicious',
+                                            'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400':
+                                                check.status === 'infected' ||
+                                                check.status === 'failed',
+                                        }"
+                                    >
+                                        <Icon
+                                            :name="
+                                                check.skipped
+                                                    ? 'chevron-right'
+                                                    : check.status === 'clean'
+                                                      ? 'check'
+                                                      : 'x'
+                                            "
+                                            :size="11"
+                                        />
+                                    </span>
+                                    <span class="truncate text-sm">
+                                        {{
+                                            checkLabels[check.check] ??
+                                            check.check
+                                        }}
+                                    </span>
+                                    <span
+                                        v-if="check.skipped"
+                                        class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] tracking-wide text-slate-500 uppercase dark:bg-slate-800 dark:text-slate-400"
+                                    >
+                                        skipped
+                                    </span>
                                 </span>
-                                <span class="truncate text-sm">
+
+                                <span
+                                    class="shrink-0 text-xs text-slate-400 tabular-nums dark:text-slate-500"
+                                >
                                     {{
-                                        checkLabels[check.check] ?? check.check
+                                        check.duration_ms > 0
+                                            ? `${check.duration_ms} ms`
+                                            : '—'
                                     }}
                                 </span>
-                                <span
-                                    v-if="check.skipped"
-                                    class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] tracking-wide text-slate-500 uppercase dark:bg-slate-800 dark:text-slate-400"
-                                >
-                                    skipped
-                                </span>
-                            </span>
+                            </div>
 
-                            <span
-                                class="shrink-0 text-xs text-slate-400 tabular-nums dark:text-slate-500"
+                            <!-- Zakaj: napaka, najdba in podatki, ki jo utemeljujejo. -->
+                            <div
+                                v-if="
+                                    !check.skipped && check.status !== 'clean'
+                                "
+                                class="mt-2 ml-7 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-800/40"
                             >
-                                {{
-                                    check.duration_ms > 0
-                                        ? `${check.duration_ms} ms`
-                                        : '—'
-                                }}
-                            </span>
+                                <p class="text-slate-600 dark:text-slate-300">
+                                    {{
+                                        checkExplanations[check.check] ??
+                                        'The policy refused this check.'
+                                    }}
+                                </p>
+
+                                <p
+                                    v-if="check.error"
+                                    class="mt-2 font-mono text-red-700 dark:text-red-400"
+                                >
+                                    {{ check.error }}
+                                </p>
+
+                                <div
+                                    v-for="threat in threatsFor(check.check)"
+                                    :key="threat.name"
+                                    class="mt-2"
+                                >
+                                    <p
+                                        class="font-medium text-slate-900 dark:text-slate-100"
+                                    >
+                                        {{ threat.name }}
+                                        <span class="text-slate-400"
+                                            >· {{ threat.level }}</span
+                                        >
+                                    </p>
+                                    <p
+                                        v-if="threat.description"
+                                        class="text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{ threat.description }}
+                                    </p>
+                                </div>
+
+                                <dl
+                                    v-if="evidenceFor(check).length > 0"
+                                    class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1"
+                                >
+                                    <template
+                                        v-for="row in evidenceFor(check)"
+                                        :key="row.label"
+                                    >
+                                        <dt
+                                            class="text-slate-400 capitalize dark:text-slate-500"
+                                        >
+                                            {{ row.label }}
+                                        </dt>
+                                        <dd
+                                            class="font-mono break-all text-slate-700 dark:text-slate-300"
+                                        >
+                                            {{ row.value }}
+                                        </dd>
+                                    </template>
+                                </dl>
+                            </div>
                         </li>
                     </ul>
 

@@ -179,3 +179,17 @@ it('does not need the engine when everything is already scanned', function (): v
 
     $this->artisan('content-security:scan-disk uploads')->assertSuccessful();
 });
+
+it('remembers where the file lives so the console can show it', function (): void {
+    useDiskScanner(FakeMalwareScanner::clean());
+    Storage::fake('uploads');
+    Storage::disk('uploads')->put('logos/a.webp', 'vsebina');
+
+    $this->artisan('content-security:scan-disk uploads')->assertSuccessful();
+
+    $scan = SecurityScan::query()->sole();
+
+    // Brez tega bi konzola vedela, da je slika cista, ne pa katera.
+    expect($scan->metadata['disk'] ?? null)->toBe('uploads')
+        ->and($scan->metadata['disk_path'] ?? null)->toBe('logos/a.webp');
+});

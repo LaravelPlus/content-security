@@ -35,6 +35,10 @@ export type IconName =
     | 'trash'
     | 'unlock'
     | 'file'
+    | 'image'
+    | 'archive'
+    | 'text'
+    | 'pdf'
     | 'external';
 
 const paths: Record<IconName, string[]> = {
@@ -88,6 +92,14 @@ const paths: Record<IconName, string[]> = {
     ],
     unlock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 7.5-2'],
     file: ['M6 3h7l5 5v13H6z', 'M13 3v5h5'],
+    image: [
+        'M4 5h16v14H4z',
+        'M4 16l4.5-4.5 3 3L15 11l5 5',
+        'M9 9.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z',
+    ],
+    archive: ['M3 7h18v13H3z', 'M3 7l2-3h14l2 3', 'M10 12h4'],
+    text: ['M6 3h7l5 5v13H6z', 'M13 3v5h5', 'M9 13h6', 'M9 17h6'],
+    pdf: ['M6 3h7l5 5v13H6z', 'M13 3v5h5', 'M9 14h1.5a1.5 1.5 0 0 1 0 3H9v-3Z', 'M14 14v3'],
     external: [
         'M14 4h6v6',
         'M20 4l-8 8',
