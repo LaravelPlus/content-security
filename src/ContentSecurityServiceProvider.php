@@ -14,6 +14,7 @@ use LaravelPlus\ContentSecurity\Console\Commands\InstallCommand;
 use LaravelPlus\ContentSecurity\Console\Commands\PublishPagesCommand;
 use LaravelPlus\ContentSecurity\Console\Commands\ReportCommand;
 use LaravelPlus\ContentSecurity\Console\Commands\ScanCommand;
+use LaravelPlus\ContentSecurity\Console\Commands\ScanDiskCommand;
 use LaravelPlus\ContentSecurity\Console\Commands\StatusCommand;
 use LaravelPlus\ContentSecurity\Contracts\ArchiveInspector as ArchiveInspectorContract;
 use LaravelPlus\ContentSecurity\Contracts\FileCheck;
@@ -261,6 +262,7 @@ final class ContentSecurityServiceProvider extends ServiceProvider
         $this->commands([
             StatusCommand::class,
             ScanCommand::class,
+            ScanDiskCommand::class,
             HealthCommand::class,
             CleanupQuarantineCommand::class,
             ReportCommand::class,
