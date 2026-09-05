@@ -12,15 +12,12 @@ const label = (bucket: string): string => bucket.slice(-5).replace(':00', 'h');
 </script>
 
 <template>
-    <div
-        class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
-    >
-        <p
-            class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400"
-        >
-            Scan volume
-        </p>
-
+    <!--
+        Samo graf: naslov in okvir nosi stran, ki ga postavi. Komponenta je
+        prej prinesla svojo kartico in svoj naslov, kar je ob prenovi zaslona
+        pomenilo okvir v okvirju in dvakrat isto besedo.
+    -->
+    <div>
         <div
             v-if="props.points.length === 0"
             class="mt-6 pb-4 text-center text-xs text-slate-400 dark:text-slate-600"
@@ -33,14 +30,14 @@ const label = (bucket: string): string => bucket.slice(-5).replace(':00', 'h');
              gives them 0px to resolve against. -->
         <div
             v-else
-            class="mt-4 flex h-28 items-stretch gap-1"
+            class="mt-1 flex h-28 items-stretch gap-1"
             role="img"
             aria-label="Scan volume over time"
         >
             <div
                 v-for="point in props.points"
                 :key="point.bucket"
-                class="group relative flex flex-1 flex-col justify-end"
+                class="group relative flex max-w-12 flex-1 flex-col justify-end"
                 :title="`${point.bucket}: ${point.total} scans, ${point.threats} with findings`"
             >
                 <!-- Findings stack on top of the clean count rather than
