@@ -33,6 +33,7 @@ final class ScanDiskCommand extends Command
         {disk : Filesystem disk to walk}
         {--path= : Only this directory prefix}
         {--policy= : The file policy to apply}
+        {--exclude= : Skip paths matching this regular expression}
         {--limit=0 : Stop after this many scans (0 = no limit)}
         {--rescan : Scan files that already have a scan on file}
         {--no-quarantine : Report findings without copying anything to quarantine}
@@ -60,6 +61,23 @@ final class ScanDiskCommand extends Command
             $this->components->info(sprintf('Nothing on [%s]%s.', $disk, $prefix === '' ? '' : ' under '.$prefix));
 
             return self::SUCCESS;
+        }
+
+        // Izpeljanke (pomanjsave, predogledi) nastanejo iz izvirnika na nasem
+        // strezniku; ce je izvirnik cist, so ciste tudi one, in prenos vsake
+        // razlicice posebej je placan trikrat za isto sliko.
+        $exclude = is_string($this->option('exclude')) && $this->option('exclude') !== ''
+            ? (string) $this->option('exclude')
+            : null;
+
+        if ($exclude !== null) {
+            $before = count($files);
+            $files = array_values(array_filter(
+                $files,
+                static fn (string $path): bool => preg_match($exclude, $path) !== 1,
+            ));
+
+            $this->components->info(sprintf('Excluded %d of %d paths.', $before - count($files), $before));
         }
 
         $seen = $this->alreadyScanned($files);

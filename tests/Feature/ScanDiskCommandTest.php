@@ -126,3 +126,17 @@ it('says so when the disk is empty', function (): void {
 it('fails loudly on a disk that cannot be listed', function (): void {
     $this->artisan('content-security:scan-disk ni-takega-diska')->assertFailed();
 });
+
+it('can leave derived variants alone', function (): void {
+    useDiskScanner(FakeMalwareScanner::clean());
+    Storage::fake('uploads');
+    Storage::disk('uploads')->put('logos/a.webp', 'izvirnik');
+    Storage::disk('uploads')->put('logos/a.96.webp', 'pomanjsava');
+    Storage::disk('uploads')->put('logos/a.256.webp', 'pomanjsava');
+
+    $this->artisan('content-security:scan-disk uploads --exclude=/\.(96|256)\./')->assertSuccessful();
+
+    // Izpeljanka nastane iz izvirnika na nasem strezniku; cist izvirnik pomeni
+    // cisto izpeljanko, prenos vsake posebej pa je placan trikrat.
+    expect(SecurityScan::query()->pluck('original_filename')->all())->toBe(['logos/a.webp']);
+});
