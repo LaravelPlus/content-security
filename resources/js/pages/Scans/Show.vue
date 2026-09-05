@@ -255,7 +255,7 @@ const details = computed(() => {
                             class="min-w-0"
                         >
                             <dt
-                                class="text-[11px] tracking-wide text-slate-500 uppercase dark:text-slate-400"
+                                class="text-xs text-slate-500 dark:text-slate-400"
                             >
                                 {{ row.label }}
                             </dt>
@@ -442,7 +442,7 @@ const details = computed(() => {
                                         {{ threat.description }}
                                     </p>
                                     <p
-                                        class="mt-1 text-[11px] tracking-wide text-slate-400 uppercase dark:text-slate-500"
+                                        class="mt-1 text-xs text-slate-400 dark:text-slate-500"
                                     >
                                         Detected by {{ threat.source }}
                                     </p>

@@ -83,9 +83,7 @@ const runTest = (): void => {
                 </p>
 
                 <div class="mt-4">
-                    <p
-                        class="mb-2 text-[11px] tracking-wider text-slate-500 uppercase dark:text-slate-400"
-                    >
+                    <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">
                         Files
                     </p>
                     <ol class="flex flex-wrap items-center gap-1.5">
@@ -110,9 +108,7 @@ const runTest = (): void => {
                 </div>
 
                 <div class="mt-4">
-                    <p
-                        class="mb-2 text-[11px] tracking-wider text-slate-500 uppercase dark:text-slate-400"
-                    >
+                    <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">
                         Text
                     </p>
                     <ol class="flex flex-wrap items-center gap-1.5">

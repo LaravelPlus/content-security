@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import Icon from '../components/Icon.vue';
+import ThemeToggle from '../components/ThemeToggle.vue';
 import type { IconName } from '../components/Icon.vue';
 import { useConsole } from '../composables/useConsole';
 
@@ -48,7 +49,7 @@ const flash = computed(
 
 <template>
     <div
-        class="min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100"
+        class="cs-console min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100"
     >
         <!-- Drawer backdrop, small screens only. -->
         <div
@@ -137,6 +138,8 @@ const flash = computed(
                     </div>
 
                     <slot name="actions" />
+
+                    <ThemeToggle />
                 </div>
             </header>
 
@@ -164,3 +167,63 @@ const flash = computed(
         </div>
     </div>
 </template>
+
+<style>
+/*
+ * Drsniki so del zaslona, ne brskalnikov privzetek.
+ *
+ * V temni temi je siv sistemski drsnik svetel jezik cez temno stran -- pri
+ * gostih tabelah, ki jih ta konzola ima, je to prva stvar, ki pade v oci.
+ * Barve visijo na spremenljivkah, zato jih tema premakne skupaj z vsem
+ * ostalim; `scrollbar-color` pokrije Firefox, `::-webkit-scrollbar` pa
+ * Chrome in Safari.
+ */
+.cs-console {
+    --cs-scroll-thumb: rgb(203 213 225);
+    --cs-scroll-thumb-hover: rgb(148 163 184);
+    --cs-scroll-track: transparent;
+
+    scrollbar-width: thin;
+    scrollbar-color: var(--cs-scroll-thumb) var(--cs-scroll-track);
+}
+
+.dark .cs-console {
+    --cs-scroll-thumb: rgb(51 65 85);
+    --cs-scroll-thumb-hover: rgb(71 85 105);
+}
+
+.cs-console *,
+.cs-console {
+    scrollbar-width: thin;
+    scrollbar-color: var(--cs-scroll-thumb) var(--cs-scroll-track);
+}
+
+.cs-console *::-webkit-scrollbar,
+.cs-console::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.cs-console *::-webkit-scrollbar-track,
+.cs-console::-webkit-scrollbar-track {
+    background: var(--cs-scroll-track);
+}
+
+.cs-console *::-webkit-scrollbar-thumb,
+.cs-console::-webkit-scrollbar-thumb {
+    background-color: var(--cs-scroll-thumb);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    border-radius: 9999px;
+}
+
+.cs-console *::-webkit-scrollbar-thumb:hover,
+.cs-console::-webkit-scrollbar-thumb:hover {
+    background-color: var(--cs-scroll-thumb-hover);
+}
+
+.cs-console *::-webkit-scrollbar-corner,
+.cs-console::-webkit-scrollbar-corner {
+    background: transparent;
+}
+</style>

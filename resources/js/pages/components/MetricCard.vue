@@ -39,9 +39,7 @@ const tones = {
                 :size="14"
                 class="text-slate-400 dark:text-slate-500"
             />
-            <p
-                class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400"
-            >
+            <p class="text-xs text-slate-500 dark:text-slate-400">
                 {{ props.label }}
             </p>
         </div>

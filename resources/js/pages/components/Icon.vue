@@ -39,6 +39,9 @@ export type IconName =
     | 'archive'
     | 'text'
     | 'pdf'
+    | 'sun'
+    | 'moon'
+    | 'monitor'
     | 'external';
 
 const paths: Record<IconName, string[]> = {
@@ -92,6 +95,19 @@ const paths: Record<IconName, string[]> = {
     ],
     unlock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 7.5-2'],
     file: ['M6 3h7l5 5v13H6z', 'M13 3v5h5'],
+    sun: [
+        'M12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z',
+        'M12 2v2',
+        'M12 20v2',
+        'M4.9 4.9l1.4 1.4',
+        'M17.7 17.7l1.4 1.4',
+        'M2 12h2',
+        'M20 12h2',
+        'M4.9 19.1l1.4-1.4',
+        'M17.7 6.3l1.4-1.4',
+    ],
+    moon: ['M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z'],
+    monitor: ['M3 4h18v12H3z', 'M8 20h8', 'M12 16v4'],
     image: [
         'M4 5h16v14H4z',
         'M4 16l4.5-4.5 3 3L15 11l5 5',

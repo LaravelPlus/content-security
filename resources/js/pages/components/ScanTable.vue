@@ -37,7 +37,7 @@ const { route } = useConsole();
         >
             <thead>
                 <tr
-                    class="text-left text-[11px] tracking-wider text-slate-500 uppercase dark:text-slate-400"
+                    class="text-left text-xs text-slate-500 dark:text-slate-400"
                 >
                     <th scope="col" class="px-4 py-2.5 font-semibold">Scan</th>
                     <th scope="col" class="px-4 py-2.5 font-semibold">Date</th>
