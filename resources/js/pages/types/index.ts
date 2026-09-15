@@ -15,7 +15,7 @@ export type ScanStatus =
 
 export type ThreatLevel = 'info' | 'low' | 'medium' | 'high' | 'critical';
 
-export type ScanType = 'file' | 'text' | 'html' | 'url';
+export type ScanType = 'file' | 'text' | 'html' | 'url' | 'email';
 
 export type PostureState = 'healthy' | 'warning' | 'critical';
 

@@ -6,6 +6,7 @@ namespace LaravelPlus\ContentSecurity;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use LaravelPlus\ContentSecurity\Console\Commands\CleanupQuarantineCommand;
@@ -40,6 +41,7 @@ use LaravelPlus\ContentSecurity\File\Images\ImageInspector;
 use LaravelPlus\ContentSecurity\File\Malware\MalwareScannerManager;
 use LaravelPlus\ContentSecurity\File\Pdf\PdfInspector;
 use LaravelPlus\ContentSecurity\Listeners\LogSecurityEvent;
+use LaravelPlus\ContentSecurity\Listeners\ScanOutgoingMail;
 use LaravelPlus\ContentSecurity\Pipeline\CheckRegistry;
 use LaravelPlus\ContentSecurity\Pipeline\PipelineRunner;
 use LaravelPlus\ContentSecurity\Repositories\ConfigPolicyRepository;
@@ -120,6 +122,9 @@ final class ContentSecurityServiceProvider extends ServiceProvider
         $this->registerSchedule();
 
         $this->app->make('events')->subscribe(LogSecurityEvent::class);
+        // Always registered; it checks `mail.scan_outbound` itself, so the
+        // switch works at runtime and not only at boot.
+        $this->app->make('events')->listen(MessageSending::class, ScanOutgoingMail::class);
 
         // Policies resolve through the repository unless the host has
         // registered its own resolver, which still wins.

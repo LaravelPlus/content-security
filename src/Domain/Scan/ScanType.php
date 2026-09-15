@@ -10,6 +10,7 @@ enum ScanType: string
     case Text = 'text';
     case Html = 'html';
     case Url = 'url';
+    case Email = 'email';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum ScanType: string
             self::Text => 'Text',
             self::Html => 'HTML',
             self::Url => 'URL',
+            self::Email => 'Email',
         };
     }
 }
