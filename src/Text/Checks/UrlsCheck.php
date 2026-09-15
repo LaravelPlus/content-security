@@ -71,9 +71,11 @@ final class UrlsCheck extends AbstractTextCheck
      */
     private function extract(string $text): array
     {
-        // Any scheme, not just http(s): a pattern that only matches http
-        // would skip the javascript: and data: payloads that matter most.
-        preg_match_all('#\b[a-z][a-z0-9+.-]{1,20}:(?://)?[^\s<>"\']{1,2000}#i', $text, $matches);
+        // Any scheme followed by `//`, plus the slashless schemes that carry
+        // payloads. A pattern that only matched http would skip javascript:
+        // and data:; one that took every `word:` read CSS (`color:#fff`) and
+        // prose (`time:10am`) as URLs with forbidden schemes and blocked them.
+        preg_match_all('#\b(?:[a-z][a-z0-9+.-]{1,20}://|(?:javascript|vbscript|data|file):)[^\s<>"\']{1,2000}#i', $text, $matches);
 
         /** @var list<string> $urls */
         $urls = array_values(array_unique($matches[0]));
