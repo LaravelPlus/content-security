@@ -176,6 +176,22 @@ $result->metadata();
 $result->highestThreatLevel();
 ```
 
+### Email
+
+`scanEmail()` takes a `Symfony\Component\Mime\Email` — which every Laravel mail already is — and runs each part through the pipeline it belongs to: subject and text body as text, the HTML body as text with URL checks, every attachment as a file (audited and quarantined like any upload). The result is the worst part; `checks()` holds one entry per part (`subject`, `text`, `html`, `attachment:invoice.pdf`), each carrying its own `scan_id`.
+
+```php
+$result = ContentSecurity::scanEmail($email);
+
+if (! $result->isClean()) {
+    // block or quarantine
+}
+```
+
+Inbound mail (SES, Mailgun, Postmark, IMAP) is scanned the same way once parsed into an `Email`.
+
+To scan everything the application sends, set `CONTENT_SECURITY_SCAN_OUTBOUND_MAIL=true`. A message that is not clean is cancelled before it leaves — `Mail::send()` returns `null` and `content-security.mail.blocked` is logged. That includes a scanner that is down: fail closed.
+
 ### The file pipeline
 
 Cheapest first, so an obviously bad upload never reaches the engine:

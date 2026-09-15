@@ -23,6 +23,7 @@ use LaravelPlus\ContentSecurity\Contracts\UrlInspector;
 use LaravelPlus\ContentSecurity\Domain\File\FileReference;
 use LaravelPlus\ContentSecurity\Domain\Policy\FilePolicy;
 use LaravelPlus\ContentSecurity\Domain\Policy\TextPolicy;
+use LaravelPlus\ContentSecurity\Domain\Scan\CheckResult;
 use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanContext;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanId;
@@ -36,6 +37,8 @@ use LaravelPlus\ContentSecurity\Jobs\ScanFileJob;
 use LaravelPlus\ContentSecurity\Pipeline\CheckRegistry;
 use LaravelPlus\ContentSecurity\Support\HookRegistry;
 use LaravelPlus\ContentSecurity\Support\ScannerHealth;
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Part\DataPart;
 
 /**
  * The package's front door, and the object behind the ContentSecurity facade.
@@ -162,6 +165,57 @@ final class ContentSecurity implements FileScanner, TextScanner
     public function isSafeUrl(string $url): bool
     {
         return $this->urls->isSafe($url);
+    }
+
+    /**
+     * Scans every part of an email — subject, bodies, attachments — through
+     * the pipelines above and returns one verdict: the worst of its parts.
+     *
+     * Outbound Laravel mail already is an Email; inbound mail (SES, Mailgun,
+     * IMAP) is scanned once parsed into one. Each part is scanned, audited
+     * and quarantined exactly as it would be on its own, and its outcome is
+     * one entry in the result's checks().
+     */
+    public function scanEmail(Email $email): ScanResult
+    {
+        $started = hrtime(true);
+        $parts = [];
+
+        if (($subject = (string) $email->getSubject()) !== '') {
+            $parts[] = ['subject', $this->scanText($subject)];
+        }
+
+        if (($text = $this->body($email->getTextBody())) !== '') {
+            $parts[] = ['text', $this->scanText($text)];
+        }
+
+        if (($html = $this->body($email->getHtmlBody())) !== '') {
+            // ponytail: the plain-text policy, not `rich`. Mail HTML is
+            // inline-styled by design, so the rich policy's sanitizer diff
+            // flags every message. Scripts, event handlers and hostile URLs
+            // are still caught; a mail-specific sanitizer profile is the
+            // upgrade if markup-level findings are ever wanted.
+            $parts[] = ['html', $this->scanHtml($html, 'default')];
+        }
+
+        foreach ($email->getAttachments() as $attachment) {
+            $parts[] = ['attachment:'.($attachment->getFilename() ?? 'unnamed'), $this->scanAttachment($attachment)];
+        }
+
+        $checks = array_map(static fn (array $part): CheckResult => new CheckResult(
+            check: $part[0],
+            status: $part[1]->status(),
+            threats: $part[1]->threats(),
+            metadata: ['scan_id' => (string) $part[1]->scanId()],
+            durationMs: $part[1]->duration(),
+        ), $parts);
+
+        return ScanResult::fromChecks(
+            ScanContext::for(ScanType::Email, 'default'),
+            $checks,
+            'email',
+            (hrtime(true) - $started) / 1e6,
+        );
     }
 
     // ---------------------------------------------------------------------
@@ -382,6 +436,37 @@ final class ContentSecurity implements FileScanner, TextScanner
             $file instanceof UploadedFile => FileReference::fromUploadedFile($file),
             default => FileReference::fromPath($file),
         };
+    }
+
+    /** @param resource|string|null $body */
+    private function body(mixed $body): string
+    {
+        return is_resource($body) ? (string) stream_get_contents($body, null, 0) : (string) $body;
+    }
+
+    private function scanAttachment(DataPart $attachment): ScanResult
+    {
+        // No dots in the prefix: the double-extension check reads the name.
+        $path = tempnam(sys_get_temp_dir(), 'cs-mail-');
+
+        if ($path === false || file_put_contents($path, $attachment->getBody()) === false) {
+            return ScanResult::failure(
+                ScanContext::for(ScanType::File, 'default'),
+                'The attachment could not be written to a temporary file.',
+            );
+        }
+
+        try {
+            // The sender's filename and type are evidence for the checks,
+            // never trusted and never used as a path.
+            return $this->scanFile(FileReference::fromPath(
+                $path,
+                $attachment->getFilename() ?? 'unnamed',
+                $attachment->getContentType(),
+            ));
+        } finally {
+            @unlink($path);
+        }
     }
 
     private function policyName(FilePolicy|string|null $policy): ?string

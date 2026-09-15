@@ -17,6 +17,7 @@ use LaravelPlus\ContentSecurity\Domain\Scan\ScanResult;
 use LaravelPlus\ContentSecurity\Pipeline\CheckRegistry;
 use LaravelPlus\ContentSecurity\Support\HookRegistry;
 use LaravelPlus\ContentSecurity\Support\ScannerHealth;
+use Symfony\Component\Mime\Email;
 
 /**
  * @method static ScanResult scanFile(UploadedFile|FileReference|string $file, FilePolicy|string|null $policy = null)
@@ -28,6 +29,7 @@ use LaravelPlus\ContentSecurity\Support\ScannerHealth;
  * @method static string sanitizeHtml(string $html)
  * @method static ScanResult scanUrl(string $url)
  * @method static bool isSafeUrl(string $url)
+ * @method static ScanResult scanEmail(Email $email)
  * @method static ScanId queue(UploadedFile|FileReference|string $file, FilePolicy|string|null $policy = null)
  * @method static MalwareScanner scanner(string|null $name = null)
  * @method static list<ScannerHealth> health()

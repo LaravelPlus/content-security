@@ -405,6 +405,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Email
+    |--------------------------------------------------------------------------
+    | ContentSecurity::scanEmail() is always available, for inbound mail too.
+    | This switch also scans every message Laravel sends and cancels any that
+    | is not clean — including when the scanner is down (fail closed).
+    */
+
+    'mail' => [
+        'scan_outbound' => (bool) env('CONTENT_SECURITY_SCAN_OUTBOUND_MAIL', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Admin console
     |--------------------------------------------------------------------------
     | Authorization is the host application's decision. Register a callback
