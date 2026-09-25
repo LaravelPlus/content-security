@@ -51,6 +51,10 @@ final class ImageCheck extends AbstractFileCheck
 
         $findings = $this->inspector->inspect($file);
 
+        if ($policy->allowTrailingData) {
+            $findings = $this->tolerateTrailingData($findings);
+        }
+
         if ($this->inspector->reencodes()) {
             $findings = $findings->withMetadata([
                 'reencoded' => $this->inspector->reencode($file),
@@ -58,6 +62,23 @@ final class ImageCheck extends AbstractFileCheck
         }
 
         return $findings;
+    }
+
+    /**
+     * Keeps the trailer on record but at Info, so it no longer rejects. Only
+     * that one finding moves: a pixel bomb in the same file still blocks.
+     */
+    private function tolerateTrailingData(Findings $findings): Findings
+    {
+        return new Findings(
+            array_map(
+                static fn (Threat $threat): Threat => $threat->name === 'image.trailing_data'
+                    ? new Threat($threat->name, ThreatLevel::Info, $threat->source, $threat->description, $threat->metadata)
+                    : $threat,
+                $findings->threats,
+            ),
+            $findings->metadata,
+        );
     }
 
     private function inspectSvg(FileReference $file): Findings

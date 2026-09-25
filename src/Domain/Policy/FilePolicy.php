@@ -19,6 +19,10 @@ final readonly class FilePolicy implements SecurityPolicy
      * @param  list<string>  $mimeTypes  empty = derive from the extensions
      * @param  array<string, bool>  $checks
      * @param  list<string>  $forbiddenExtensions
+     * @param  bool  $allowTrailingData  bytes after an image's end marker are
+     *                                   recorded but do not reject — for slots whose host decodes and re-encodes
+     *                                   every upload, so the trailer never reaches storage. Phone cameras write
+     *                                   one routinely (Samsung SEFT trailers, Motion Photo video).
      */
     public function __construct(
         private string $name,
@@ -29,6 +33,7 @@ final readonly class FilePolicy implements SecurityPolicy
         private array $checks = [],
         public FailureAction $onThreat = FailureAction::Quarantine,
         public array $forbiddenExtensions = [],
+        public bool $allowTrailingData = false,
     ) {}
 
     /**
@@ -67,6 +72,7 @@ final readonly class FilePolicy implements SecurityPolicy
                 static fn (string $ext): string => Str::lower(ltrim($ext, '.')),
                 $forbiddenExtensions,
             )),
+            allowTrailingData: (bool) ($config['allow_trailing_data'] ?? false),
         );
     }
 
@@ -193,6 +199,7 @@ final readonly class FilePolicy implements SecurityPolicy
             'checks' => $this->checks,
             'on_threat' => $this->onThreat->value,
             'forbidden_extensions' => $this->forbiddenExtensions,
+            'allow_trailing_data' => $this->allowTrailingData,
         ];
     }
 }
