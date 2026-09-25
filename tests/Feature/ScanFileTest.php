@@ -6,6 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use LaravelPlus\ContentSecurity\Contracts\MalwareScanner;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanStatus;
+use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
 use LaravelPlus\ContentSecurity\Events\ScanCompleted;
 use LaravelPlus\ContentSecurity\Events\ThreatDetected;
 use LaravelPlus\ContentSecurity\Facades\ContentSecurity;
@@ -180,3 +181,35 @@ it('treats an unset or null-ish malware driver as no engine, not as broken confi
     'none' => ['none'],
     'legacy null alias' => ['null'],
 ]);
+
+function jpegWithTrailer(string $trailer): string
+{
+    $image = imagecreatetruecolor(32, 32);
+    ob_start();
+    imagejpeg($image);
+    $jpeg = (string) ob_get_clean();
+    imagedestroy($image);
+
+    return textFile('photo.jpg', $jpeg.$trailer);
+}
+
+it('flags bytes after the JPEG end marker by default', function (): void {
+    useScanner(FakeMalwareScanner::clean());
+
+    $result = ContentSecurity::scanFile(jpegWithTrailer('SEFHImage_UTC_Data1727270000000SEFT'), 'images');
+
+    expect($result->isClean())->toBeFalse()
+        ->and(array_map(fn ($threat) => $threat->name, $result->threats()))->toContain('image.trailing_data');
+});
+
+it('passes a phone camera trailer at Info when the policy allows trailing data', function (): void {
+    useScanner(FakeMalwareScanner::clean());
+    config()->set('content-security.files.policies.images.allow_trailing_data', true);
+
+    $result = ContentSecurity::scanFile(jpegWithTrailer('SEFHImage_UTC_Data1727270000000SEFT'), 'images');
+    $trailer = collect($result->threats())->firstWhere('name', 'image.trailing_data');
+
+    expect($result->isClean())->toBeTrue()
+        ->and($trailer)->not->toBeNull()
+        ->and($trailer->level)->toBe(ThreatLevel::Info);
+});
