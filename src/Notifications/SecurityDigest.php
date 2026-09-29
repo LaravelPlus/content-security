@@ -29,21 +29,42 @@ final class SecurityDigest extends Notification
 
     public function toMail(mixed $notifiable): MailMessage
     {
-        $subject = $this->report->period === 'weekly'
-            ? __('content-security::report.weekly_subject', [
-                'from' => $this->report->from->toFormattedDateString(),
-                'to' => $this->report->to->toFormattedDateString(),
-            ])
-            : __('content-security::report.daily_subject', [
-                'date' => $this->report->from->toFormattedDateString(),
-            ]);
+        $subject = $this->subject();
 
         return (new MailMessage)
-            ->subject((string) $subject)
+            ->subject($subject)
             ->markdown('content-security::mail.digest', [
                 'report' => $this->report,
                 'consoleUrl' => $this->consoleUrl(),
             ]);
+    }
+
+    /** Verdict plus the one fact that matters: the non-zero counters, worst first. */
+    private function subject(): string
+    {
+        $counts = $this->report->counts;
+        $parts = [];
+
+        foreach (['infected', 'failed', 'quarantined', 'suspicious'] as $key) {
+            if ($counts[$key] > 0) {
+                $parts[] = __("content-security::report.{$key}").' '.$counts[$key];
+            }
+        }
+
+        if ($this->report->hasOfflineScanner()) {
+            $parts[] = __('content-security::report.scanner_offline');
+        }
+
+        $verdict = $parts === [] ? __('content-security::report.ok') : implode(', ', $parts);
+        $from = $this->report->from;
+
+        return (string) ($this->report->period === 'weekly'
+            ? __('content-security::report.weekly_subject', [
+                'from' => $from->format('j. n.'),
+                'to' => $this->report->to->format('j. n.'),
+                'verdict' => $verdict,
+            ])
+            : __('content-security::report.daily_subject', ['date' => $from->format('j. n.'), 'verdict' => $verdict]));
     }
 
     private function consoleUrl(): ?string

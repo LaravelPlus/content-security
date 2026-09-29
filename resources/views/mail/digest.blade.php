@@ -1,92 +1,34 @@
 @php
     /** @var \LaravelPlus\ContentSecurity\Reports\SecurityReport $report */
     $counts = $report->counts;
-    $accent = $report->isHealthy() && ! $report->hasOfflineScanner() ? '#047857' : '#b91c1c';
+    $offline = collect($report->scanners)->filter(fn ($s) => $s->enabled && ! $s->online)->pluck('scanner')->implode(', ');
 @endphp
 <x-mail::message>
-# {{ __('content-security::report.greeting') }}
-
-**{{ $report->from->toDayDateTimeString() }} — {{ $report->to->toDayDateTimeString() }}**
-
-@if ($report->isQuiet())
+@if ($report->isQuiet() && $offline === '')
 {{ __('content-security::report.no_activity') }}
+@elseif ($report->incidents === [] && $offline === '')
+{{ __('content-security::report.healthy', ['total' => number_format($counts['total'])]) }}
 @else
+@if ($offline !== '')
+**{{ __('content-security::report.offline_warning', ['names' => $offline]) }}**
 
-<table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;margin:16px 0;">
-    <tr>
-        <td style="border:1px solid #e5e7eb;"><strong>{{ __('content-security::report.scans') }}</strong></td>
-        <td style="border:1px solid #e5e7eb;text-align:right;">{{ number_format($counts['total']) }}</td>
-    </tr>
-    <tr>
-        <td style="border:1px solid #e5e7eb;">{{ __('content-security::report.clean') }}</td>
-        <td style="border:1px solid #e5e7eb;text-align:right;">{{ number_format($counts['clean']) }}</td>
-    </tr>
-    <tr>
-        <td style="border:1px solid #e5e7eb;">{{ __('content-security::report.suspicious') }}</td>
-        <td style="border:1px solid #e5e7eb;text-align:right;">{{ number_format($counts['suspicious']) }}</td>
-    </tr>
-    <tr>
-        <td style="border:1px solid #e5e7eb;color:{{ $counts['infected'] > 0 ? '#b91c1c' : 'inherit' }};">
-            <strong>{{ __('content-security::report.infected') }}</strong>
-        </td>
-        <td style="border:1px solid #e5e7eb;text-align:right;color:{{ $counts['infected'] > 0 ? '#b91c1c' : 'inherit' }};">
-            <strong>{{ number_format($counts['infected']) }}</strong>
-        </td>
-    </tr>
-    <tr>
-        <td style="border:1px solid #e5e7eb;">{{ __('content-security::report.quarantined') }}</td>
-        <td style="border:1px solid #e5e7eb;text-align:right;">{{ number_format($counts['quarantined']) }}</td>
-    </tr>
-    <tr>
-        <td style="border:1px solid #e5e7eb;">{{ __('content-security::report.failed') }}</td>
-        <td style="border:1px solid #e5e7eb;text-align:right;">{{ number_format($counts['failed']) }}</td>
-    </tr>
-    <tr>
-        <td style="border:1px solid #e5e7eb;">{{ __('content-security::report.avg_duration') }}</td>
-        <td style="border:1px solid #e5e7eb;text-align:right;">{{ number_format($report->averageDurationMs, 1) }} ms</td>
-    </tr>
-</table>
-
+@endif
 @if ($report->hasFailures())
-> **{{ __('content-security::report.failures_warning') }}**
+**{{ __('content-security::report.failures_warning') }}**
+
 @endif
+@foreach ($report->incidents as $i)
+- **{{ __('content-security::report.'.$i['status']) }}** · {{ $i['at']->format('j. n. H:i') }} · {{ $i['subject'] }}@if ($i['policy']) ({{ $i['policy'] }})@endif @if ($i['user']) · {{ __('content-security::report.user', ['id' => $i['user']]) }}@endif @if ($i['threats'] !== []) — {{ implode(', ', $i['threats']) }}@endif @if ($i['error']) — {{ $i['error'] }}@endif
 
-@if ($report->isHealthy())
-{{ __('content-security::report.healthy') }}
-@endif
-
-@if (count($report->topThreats) > 0)
-## {{ __('content-security::report.top_threats') }}
-
-<table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;">
-@foreach ($report->topThreats as $threat)
-    <tr>
-        <td style="border:1px solid #e5e7eb;">{{ $threat['name'] }}</td>
-        <td style="border:1px solid #e5e7eb;">{{ ucfirst($threat['level']) }}</td>
-        <td style="border:1px solid #e5e7eb;text-align:right;">{{ number_format($threat['occurrences']) }}</td>
-    </tr>
 @endforeach
-</table>
+@if ($report->incidentsTotal > count($report->incidents))
+{{ __('content-security::report.more', ['n' => $report->incidentsTotal - count($report->incidents)]) }}
 @endif
-@endif
-
-@if (count($report->scanners) > 0)
-## {{ __('content-security::report.scanner_health') }}
-
-<table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;">
-@foreach ($report->scanners as $scanner)
-    <tr>
-        <td style="border:1px solid #e5e7eb;">{{ $scanner->scanner }}</td>
-        <td style="border:1px solid #e5e7eb;text-transform:uppercase;">{{ $scanner->status() }}</td>
-        <td style="border:1px solid #e5e7eb;">{{ $scanner->version ?? '—' }}</td>
-    </tr>
-@endforeach
-</table>
-@endif
-
 @if ($consoleUrl !== null)
-<x-mail::button :url="$consoleUrl" color="{{ $report->isHealthy() ? 'success' : 'error' }}">
+
+<x-mail::button :url="$consoleUrl" color="error">
 {{ __('content-security::report.view_console') }}
 </x-mail::button>
+@endif
 @endif
 </x-mail::message>

@@ -16,3 +16,39 @@ it('renders the digest mail view without a missing mail:: hint path error', func
         ])
         ->assertExitCode(0);
 });
+
+it('lists the concrete failed scan and carries the verdict in the subject', function (): void {
+    \LaravelPlus\ContentSecurity\Models\SecurityScan::query()->create([
+        'scan_id' => 'test-1',
+        'type' => 'file',
+        'status' => 'failed',
+        'policy' => 'images',
+        'original_filename' => 'cv.pdf',
+        'user_id' => '42',
+        'metadata' => ['error' => 'ClamAV socket unreachable'],
+        'created_at' => now()->subDay(),
+    ]);
+
+    $report = \LaravelPlus\ContentSecurity\Reports\SecurityReport::build(
+        'daily', now()->subDays(2)->toImmutable(), now()->toImmutable(),
+    );
+    $mail = (new \LaravelPlus\ContentSecurity\Notifications\SecurityDigest($report))
+        ->toMail(new \Illuminate\Notifications\AnonymousNotifiable);
+    $html = (string) $mail->render();
+
+    expect($report->worthSending())->toBeTrue()
+        ->and($mail->subject)->toContain('failed scans 1')
+        ->and($html)->toContain('cv.pdf', 'user 42', 'ClamAV socket unreachable')
+        ->and($html)->not->toContain('Average scan time');
+});
+
+it('skips a daily report with only suspicious scans but keeps the weekly', function (): void {
+    \LaravelPlus\ContentSecurity\Models\SecurityScan::query()->create([
+        'scan_id' => 'test-2', 'type' => 'file', 'status' => 'suspicious', 'created_at' => now()->subDay(),
+    ]);
+
+    $daily = \LaravelPlus\ContentSecurity\Reports\SecurityReport::build('daily', now()->subDays(2)->toImmutable(), now()->toImmutable());
+    $weekly = \LaravelPlus\ContentSecurity\Reports\SecurityReport::build('weekly', now()->subDays(2)->toImmutable(), now()->toImmutable());
+
+    expect($daily->worthSending())->toBeFalse()->and($weekly->worthSending())->toBeTrue();
+});
