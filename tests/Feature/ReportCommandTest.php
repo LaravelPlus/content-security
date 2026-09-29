@@ -52,3 +52,16 @@ it('skips a daily report with only suspicious scans but keeps the weekly', funct
 
     expect($daily->worthSending())->toBeFalse()->and($weekly->worthSending())->toBeTrue();
 });
+
+it('treats an offline active scanner as news only while scanning is enabled', function (): void {
+    $offline = [\LaravelPlus\ContentSecurity\Support\ScannerHealth::offline('clamav', 'clamd did not answer PING.')->asActive()];
+    $build = fn () => \LaravelPlus\ContentSecurity\Reports\SecurityReport::build(
+        'daily', now()->subDays(2)->toImmutable(), now()->toImmutable(), $offline,
+    );
+
+    expect($build()->worthSending())->toBeTrue();
+
+    config(['content-security.enabled' => false]);
+
+    expect($build()->worthSending())->toBeFalse();
+});

@@ -142,8 +142,15 @@ final readonly class SecurityReport
 
     public function hasOfflineScanner(): bool
     {
+        // Scanning switched off on purpose (jobly since 2026-09-28, clamd
+        // masked) is not an outage — without this the daily mail fires
+        // every day about an engine nobody is meant to run.
+        if (! (bool) config('content-security.enabled', true)) {
+            return false;
+        }
+
         foreach ($this->scanners as $scanner) {
-            if ($scanner->enabled && ! $scanner->online) {
+            if ($scanner->isProblem()) {
                 return true;
             }
         }
