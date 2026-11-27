@@ -13,6 +13,7 @@ use LaravelPlus\ContentSecurity\Domain\Scan\ScanStatus;
 use LaravelPlus\ContentSecurity\Events\QuarantineDeleted;
 use LaravelPlus\ContentSecurity\Events\QuarantineReleased;
 use LaravelPlus\ContentSecurity\Exceptions\QuarantineException;
+use LaravelPlus\ContentSecurity\Models\QuarantineRelease;
 use LaravelPlus\ContentSecurity\Models\SecurityScan;
 use Throwable;
 
@@ -22,8 +23,10 @@ use Throwable;
  *
  *  - the file is rescanned first, and a release proceeds only on a clean
  *    result;
- *  - an override is possible, must be asked for explicitly, and is
- *    dispatched as an audited event;
+ *  - an override is possible, must be asked for explicitly with a reason,
+ *    and is dispatched as an audited event;
+ *  - every release writes an immutable QuarantineRelease record, and the
+ *    scan keeps the rescan's real verdict — an override never reads Clean.
  *  - the release target is chosen by the application, never by anything
  *    recorded from the upload.
  */
@@ -42,9 +45,16 @@ final readonly class ReleaseQuarantinedFile
         string $targetPath,
         int|string|null $actorId = null,
         bool $override = false,
+        ?string $reason = null,
     ): void {
         if (! $scan->isQuarantined()) {
             throw QuarantineException::notQuarantined($scan->scan_id);
+        }
+
+        $reason = $reason === null ? null : mb_trim($reason);
+
+        if ($override && ($reason === null || $reason === '')) {
+            throw QuarantineException::overrideRequiresReason($scan->scan_id);
         }
 
         $disk = (string) $scan->quarantine_disk;
@@ -63,30 +73,51 @@ final readonly class ReleaseQuarantinedFile
                 throw QuarantineException::releaseRequiresCleanScan($scan->scan_id);
             }
 
-            $stream = $file->stream();
+            // The audit row and the verdict are written in the same
+            // transaction as the copy: a failed write rolls both back, and a
+            // file never leaves quarantine without its record.
+            $scan->getConnection()->transaction(function () use ($scan, $file, $rescan, $targetDisk, $targetPath, $actorId, $override, $reason): void {
+                // A query, not forceFill(): a rollback must not leave the
+                // caller's model claiming the file is out.
+                $scan->newQuery()->whereKey($scan->getKey())->update([
+                    'status' => $rescan->status()->value,
+                    'quarantine_disk' => null,
+                    'quarantine_path' => null,
+                ]);
 
-            try {
-                $stored = $this->filesystem->disk($targetDisk)->writeStream($targetPath, $stream);
-            } finally {
-                if (is_resource($stream)) {
-                    fclose($stream);
+                QuarantineRelease::query()->create([
+                    'scan_id' => $scan->scan_id,
+                    'actor_id' => $actorId === null ? null : (string) $actorId,
+                    'overridden' => $override,
+                    'reason' => $reason,
+                    'scan_status' => $rescan->status()->value,
+                    'checksum_sha256' => $file->checksum(),
+                    'original_filename' => $scan->original_filename,
+                    'file_size' => $file->size(),
+                    'target_disk' => $targetDisk,
+                    'target_path' => $targetPath,
+                ]);
+
+                $stream = $file->stream();
+
+                try {
+                    $stored = $this->filesystem->disk($targetDisk)->writeStream($targetPath, $stream);
+                } finally {
+                    if (is_resource($stream)) {
+                        fclose($stream);
+                    }
                 }
-            }
 
-            if ($stored === false) {
-                throw QuarantineException::writeFailed($targetDisk, $targetPath);
-            }
+                if ($stored === false) {
+                    throw QuarantineException::writeFailed($targetDisk, $targetPath);
+                }
+            });
         } finally {
             $file->discardTemporary();
         }
 
         $this->filesystem->disk($disk)->delete($path);
-
-        $scan->forceFill([
-            'status' => ScanStatus::Clean->value,
-            'quarantine_disk' => null,
-            'quarantine_path' => null,
-        ])->save();
+        $scan->refresh();
 
         $this->events->dispatch(new QuarantineReleased(
             scanId: ScanId::fromString($scan->scan_id),
@@ -94,6 +125,8 @@ final readonly class ReleaseQuarantinedFile
             targetPath: $targetPath,
             actorId: $actorId,
             overridden: $override,
+            reason: $reason,
+            scanStatus: $rescan->status(),
         ));
     }
 

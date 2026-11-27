@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
@@ -11,9 +12,11 @@ use LaravelPlus\ContentSecurity\Contracts\ScanRepository;
 use LaravelPlus\ContentSecurity\Domain\File\FileReference;
 use LaravelPlus\ContentSecurity\Domain\Scan\ScanStatus;
 use LaravelPlus\ContentSecurity\Events\FileQuarantined;
+use LaravelPlus\ContentSecurity\Events\QuarantineReleased;
 use LaravelPlus\ContentSecurity\Exceptions\QuarantineException;
 use LaravelPlus\ContentSecurity\Facades\ContentSecurity;
 use LaravelPlus\ContentSecurity\Jobs\ScanFileJob;
+use LaravelPlus\ContentSecurity\Models\QuarantineRelease;
 use LaravelPlus\ContentSecurity\Models\SecurityScan;
 
 function dangerousFile(string $name = 'shell.php'): string
@@ -100,17 +103,91 @@ it('refuses to release a file that is still not clean', function (): void {
     Storage::disk('releases')->assertMissing('ok/shell.php');
 });
 
-it('allows an audited override', function (): void {
+it('allows an audited override that keeps the real verdict', function (): void {
+    Storage::fake('quarantine');
+    Storage::fake('releases');
+    Event::fake([QuarantineReleased::class]);
+
+    $result = ContentSecurity::scanFile(dangerousFile());
+    $scan = SecurityScan::query()->where('scan_id', (string) $result->scanId())->firstOrFail();
+    $checksum = hash('sha256', Storage::disk('quarantine')->get((string) $scan->quarantine_path));
+
+    app(ReleaseQuarantinedFile::class)->handle($scan, 'releases', 'ok/file.bin', 'user-1', override: true, reason: 'False positive, reviewed by security');
+
+    Storage::disk('releases')->assertExists('ok/file.bin');
+    $fresh = $scan->fresh();
+    $release = QuarantineRelease::query()->where('scan_id', $scan->scan_id)->sole();
+
+    // Released, but never relabelled: the scan still says what the rescan found.
+    expect($fresh->isQuarantined())->toBeFalse()
+        ->and($fresh->status)->not->toBe(ScanStatus::Clean)
+        ->and($release->overridden)->toBeTrue()
+        ->and($release->reason)->toBe('False positive, reviewed by security')
+        ->and($release->actor_id)->toBe('user-1')
+        ->and($release->scan_status)->toBe($fresh->status)
+        ->and($release->checksum_sha256)->toBe($checksum)
+        ->and($release->created_at)->not->toBeNull();
+
+    Event::assertDispatched(QuarantineReleased::class, static fn (QuarantineReleased $event): bool => $event->overridden
+        && $event->reason === 'False positive, reviewed by security'
+        && $event->scanStatus === $fresh->status);
+});
+
+it('refuses an override without a reason', function (?string $reason): void {
     Storage::fake('quarantine');
     Storage::fake('releases');
 
     $result = ContentSecurity::scanFile(dangerousFile());
     $scan = SecurityScan::query()->where('scan_id', (string) $result->scanId())->firstOrFail();
 
-    app(ReleaseQuarantinedFile::class)->handle($scan, 'releases', 'ok/file.bin', 'user-1', override: true);
+    expect(fn () => app(ReleaseQuarantinedFile::class)->handle($scan, 'releases', 'ok/file.bin', 'user-1', override: true, reason: $reason))
+        ->toThrow(QuarantineException::class);
 
-    Storage::disk('releases')->assertExists('ok/file.bin');
-    expect($scan->fresh()->isQuarantined())->toBeFalse();
+    Storage::disk('releases')->assertMissing('ok/file.bin');
+    expect($scan->fresh()->isQuarantined())->toBeTrue()
+        ->and(QuarantineRelease::query()->count())->toBe(0);
+})->with(['missing' => [null], 'blank' => ['   ']]);
+
+it('records a clean release too, and the record is immutable', function (): void {
+    Storage::fake('quarantine');
+    Storage::fake('releases');
+
+    $clean = ContentSecurity::scanFile(cleanFile());
+    // Force a quarantine the way a queued upload sits in it before its verdict.
+    $scan = SecurityScan::query()->where('scan_id', (string) $clean->scanId())->firstOrFail();
+    $path = 'content-security/quarantine/'.$scan->scan_id.'.quarantined';
+    Storage::disk('quarantine')->put($path, 'ordinary content');
+    $scan->forceFill(['status' => ScanStatus::Quarantined->value, 'quarantine_disk' => 'quarantine', 'quarantine_path' => $path])->save();
+
+    app(ReleaseQuarantinedFile::class)->handle($scan, 'releases', 'ok/notes.txt', 'user-2');
+
+    $release = QuarantineRelease::query()->where('scan_id', $scan->scan_id)->sole();
+    expect($scan->fresh()->status)->toBe(ScanStatus::Clean)
+        ->and($release->overridden)->toBeFalse()
+        ->and($release->scan_status)->toBe(ScanStatus::Clean)
+        ->and(fn () => $release->update(['reason' => 'edited']))->toThrow(LogicException::class)
+        ->and(fn () => $release->delete())->toThrow(LogicException::class);
+});
+
+it('leaves the file quarantined and unaudited when the copy fails', function (): void {
+    Storage::fake('quarantine');
+
+    $result = ContentSecurity::scanFile(dangerousFile());
+    $scan = SecurityScan::query()->where('scan_id', (string) $result->scanId())->firstOrFail();
+
+    $path = (string) $scan->quarantine_path;
+    $broken = Mockery::mock(Filesystem::class);
+    $broken->shouldReceive('writeStream')->andReturn(false);
+    Storage::set('broken', $broken);
+
+    expect(fn () => app(ReleaseQuarantinedFile::class)->handle($scan, 'broken', 'ok/file.bin', 'user-1', override: true, reason: 'reviewed'))
+        ->toThrow(QuarantineException::class);
+
+    Storage::disk('quarantine')->assertExists($path);
+    expect($scan->isQuarantined())->toBeTrue()
+        ->and($scan->fresh()->isQuarantined())->toBeTrue()
+        ->and($scan->fresh()->status)->toBe(ScanStatus::Quarantined)
+        ->and(QuarantineRelease::query()->count())->toBe(0);
 });
 
 it('deletes a quarantined file but keeps its scan record', function (): void {

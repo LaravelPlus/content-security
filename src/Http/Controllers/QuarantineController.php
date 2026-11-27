@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace LaravelPlus\ContentSecurity\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Response as InertiaResponse;
@@ -73,6 +73,7 @@ final class QuarantineController extends Controller
                 targetPath: $request->string('path')->value(),
                 actorId: $request->user()?->getAuthIdentifier(),
                 override: $request->boolean('override'),
+                reason: $request->input('reason'),
             );
         } catch (QuarantineException $e) {
             return back()->with('error', $e->getMessage());

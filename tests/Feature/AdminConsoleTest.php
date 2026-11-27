@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Storage;
 use LaravelPlus\ContentSecurity\Contracts\MalwareScanner;
 use LaravelPlus\ContentSecurity\Contracts\PolicyRepository;
 use LaravelPlus\ContentSecurity\Facades\ContentSecurity;
+use LaravelPlus\ContentSecurity\Models\QuarantineRelease;
 use LaravelPlus\ContentSecurity\Models\SecurityScan;
 use LaravelPlus\ContentSecurity\Tests\Support\FakeMalwareScanner;
 
@@ -226,4 +227,23 @@ it('does not flag an idle driver when a real engine is active', function (): voi
         ->and($idle['is_problem'])->toBeFalse()
         ->and($idle['status'])->toBe('inactive')
         ->and($response->json('posture.state'))->not->toBe('critical');
+});
+
+it('records the override reason given in the console', function (): void {
+    ContentSecurity::auth(fn (?ConsoleUser $user): bool => (bool) $user?->admin);
+    Storage::fake('quarantine');
+    Storage::fake('releases');
+
+    $directory = sys_get_temp_dir().'/cs-c-'.bin2hex(random_bytes(6));
+    mkdir($directory);
+    file_put_contents($directory.'/shell.php', '<?php system($_GET["c"]);');
+    $scan = SecurityScan::query()->where('scan_id', (string) ContentSecurity::scanFile($directory.'/shell.php')->scanId())->firstOrFail();
+
+    $this->actingAs(consoleUser())
+        ->post("/admin/content-security/quarantine/{$scan->getRouteKey()}/release", [
+            'disk' => 'releases', 'path' => 'ok/file.bin', 'override' => true, 'reason' => 'Reviewed: false positive',
+        ])
+        ->assertSessionHas('success');
+
+    expect(QuarantineRelease::query()->where('scan_id', $scan->scan_id)->value('reason'))->toBe('Reviewed: false positive');
 });
