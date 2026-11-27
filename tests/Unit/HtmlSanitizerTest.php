@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use LaravelPlus\ContentSecurity\Contracts\Sanitizer;
+use LaravelPlus\ContentSecurity\Text\Html\HtmlSanitizer;
 
 function sanitize(string $html): string
 {
@@ -75,3 +76,38 @@ it('survives parser-level obfuscation', function (string $payload): void {
     'unclosed attribute' => '<img src="x onerror="alert(1)">',
     'body onload' => '<body onload=alert(1)>',
 ]);
+
+it('keeps unrelated links and images when iframe hosts are allowed', function (): void {
+    $clean = HtmlSanitizer::fromConfig(['allowed_iframe_hosts' => ['www.youtube.com']])->sanitize(
+        '<a href="https://example.com/page">link</a><img src="https://cdn.example.org/a.png">'
+        .'<iframe src="https://www.youtube.com/embed/abc"></iframe>',
+    );
+
+    expect($clean)->toContain('href="https://example.com/page"')
+        ->toContain('src="https://cdn.example.org/a.png"')
+        ->toContain('src="https://www.youtube.com/embed/abc"');
+});
+
+it('drops the src of an iframe from a host not on the iframe list', function (string $src): void {
+    $clean = HtmlSanitizer::fromConfig(['allowed_iframe_hosts' => ['www.youtube.com']])
+        ->sanitize('<iframe src="'.$src.'"></iframe>');
+
+    expect($clean)->not->toContain('src=');
+})->with(['https://evil.example/embed', '/relative/embed', 'javascript:alert(1)', 'https://www.youtube.com.evil.example/x']);
+
+it('restricts links and images through their own host lists', function (): void {
+    $sanitizer = HtmlSanitizer::fromConfig([
+        'allowed_link_hosts' => ['example.com'],
+        'allowed_media_hosts' => ['cdn.example.org'],
+    ]);
+
+    $clean = $sanitizer->sanitize(
+        '<a href="https://example.com/ok">a</a><a href="https://other.example/no">b</a>'
+        .'<img src="https://cdn.example.org/ok.png"><img src="https://example.com/no.png">',
+    );
+
+    expect($clean)->toContain('https://example.com/ok')
+        ->toContain('https://cdn.example.org/ok.png')
+        ->not->toContain('other.example')
+        ->not->toContain('example.com/no.png');
+});

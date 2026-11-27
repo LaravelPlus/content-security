@@ -59,7 +59,9 @@ The test suite exercises eight of these bypasses. Adding more is welcome.
         '*' => ['class'],
     ],
     'allowed_schemes' => ['http', 'https', 'mailto'],
-    'allowed_iframe_hosts' => [],          // empty = iframes dropped
+    'allowed_link_hosts' => null,          // <a href>; null = any host
+    'allowed_media_hosts' => null,         // <img src>; null = any host
+    'allowed_iframe_hosts' => [],          // <iframe src>; empty = iframes dropped
     'force_link_rel' => 'noopener noreferrer nofollow',
     'allow_inline_styles' => false,
     'max_input_length' => 1_000_000,

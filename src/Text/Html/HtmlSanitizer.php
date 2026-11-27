@@ -85,6 +85,20 @@ final class HtmlSanitizer implements Sanitizer
                 static fn (string $scheme): bool => $scheme !== 'mailto',
             )));
 
+        /** @var list<string>|null $linkHosts */
+        $linkHosts = $this->config['allowed_link_hosts'] ?? null;
+
+        if ($linkHosts !== null) {
+            $config = $config->allowLinkHosts($linkHosts);
+        }
+
+        /** @var list<string>|null $mediaHosts */
+        $mediaHosts = $this->config['allowed_media_hosts'] ?? null;
+
+        if ($mediaHosts !== null) {
+            $config = $config->allowMediaHosts($mediaHosts);
+        }
+
         if ((bool) ($this->config['allow_relative_links'] ?? true)) {
             $config = $config->allowRelativeLinks();
         }
@@ -99,8 +113,7 @@ final class HtmlSanitizer implements Sanitizer
         if ($iframeHosts !== []) {
             $config = $config
                 ->allowElement('iframe', ['src', 'width', 'height', 'title', 'allow', 'allowfullscreen'])
-                ->allowLinkHosts($iframeHosts)
-                ->allowMediaHosts($iframeHosts);
+                ->withAttributeSanitizer(new IframeSrcSanitizer(array_values($iframeHosts)));
         } else {
             $config = $config->blockElement('iframe');
         }
