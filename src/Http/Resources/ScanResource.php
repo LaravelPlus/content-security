@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace LaravelPlus\ContentSecurity\Http\Resources;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 use LaravelPlus\ContentSecurity\Models\SecurityScan;
 use Throwable;
 
@@ -64,6 +64,7 @@ final class ScanResource extends JsonResource
         }
     }
 
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         /** @var SecurityScan $scan */

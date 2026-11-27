@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use LaravelPlus\ContentSecurity\Http\Resources\ScanResource;
 use LaravelPlus\ContentSecurity\Models\SecurityScan;
 
@@ -12,7 +13,7 @@ use LaravelPlus\ContentSecurity\Models\SecurityScan;
 function scanRow(array $attributes = []): SecurityScan
 {
     return SecurityScan::query()->create(array_merge([
-        'scan_id' => (string) Illuminate\Support\Str::ulid(),
+        'scan_id' => (string) Str::ulid(),
         'type' => 'file',
         'status' => 'clean',
         'original_filename' => 'logos/a.webp',

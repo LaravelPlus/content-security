@@ -89,11 +89,13 @@ final class ClamAvTest extends TestCase
 
     public function test_a_large_file_streams_rather_than_buffering(): void
     {
+        // The fixture is built in memory, so it is created before the peak is
+        // reset: only the scan itself is measured.
+        $file = $this->file('big.bin', str_repeat('a', 32 * 1024 * 1024));
+        memory_reset_peak_usage();
         $before = memory_get_peak_usage(true);
 
-        $result = $this->scanner()->scan(
-            $this->file('big.bin', str_repeat('a', 32 * 1024 * 1024)),
-        );
+        $result = $this->scanner()->scan($file);
 
         $growth = memory_get_peak_usage(true) - $before;
 

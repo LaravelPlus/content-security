@@ -45,8 +45,8 @@ final class ScanDiskCommand extends Command
 
     public function handle(ScanFile $scanner, ContentSecurity $security): int
     {
-        $disk = (string) $this->argument('disk');
-        $prefix = (string) ($this->option('path') ?? '');
+        $disk = is_string($this->argument('disk')) ? $this->argument('disk') : '';
+        $prefix = is_string($this->option('path')) ? $this->option('path') : '';
         $policy = is_string($this->option('policy')) ? $this->option('policy') : null;
         $limit = max(0, (int) $this->option('limit'));
         $dryRun = (bool) $this->option('dry-run');
@@ -82,7 +82,7 @@ final class ScanDiskCommand extends Command
             $this->components->info(sprintf('Excluded %d of %d paths.', $before - count($files), $before));
         }
 
-        $seen = $this->alreadyScanned($files);
+        $seen = $this->alreadyScanned(array_values($files));
         $rescan = (bool) $this->option('rescan');
 
         $pending = $rescan
