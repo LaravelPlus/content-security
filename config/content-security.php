@@ -32,6 +32,19 @@ return [
     |--------------------------------------------------------------------------
     | `default` is used whenever a rule or API call does not name a policy.
     | Every other key is addressable: new SafeFile('avatars').
+    |
+    | Sizes take bytes or a human size: '500 KB', '10 MB', '2 GB'. Units are
+    | binary (1 KB = 1024 bytes). Two optional keys bound a multi-file field
+    | (new SafeFile('support') on an array of uploads) and are unlimited
+    | when unset:
+    |
+    |   'max_files' => 5,
+    |   'max_total_size' => '50 MB',
+    |
+    | A field can only tighten these: (new SafeFile('images'))->maxSize('2 MB').
+    | Keep nginx client_max_body_size and PHP upload_max_filesize /
+    | post_max_size at or above the largest batch, or the upload never
+    | reaches this check.
     */
 
     'files' => [

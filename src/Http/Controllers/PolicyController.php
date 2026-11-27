@@ -14,6 +14,7 @@ use LaravelPlus\ContentSecurity\Domain\Policy\SecurityPolicy;
 use LaravelPlus\ContentSecurity\Http\Controllers\Concerns\RendersConsole;
 use LaravelPlus\ContentSecurity\Http\Requests\UpdatePolicyRequest;
 use LaravelPlus\ContentSecurity\Http\Resources\PolicyResource;
+use LaravelPlus\ContentSecurity\Support\Bytes;
 
 /**
  * Policies are config first. The database, when runtime editing is enabled,
@@ -41,7 +42,7 @@ final class PolicyController extends Controller
                 'quarantineDisk' => (string) config('content-security.storage.quarantine_disk', 'local'),
             ],
             'limits' => [
-                'maxSizeCeiling' => (int) config('content-security.files.max_size_ceiling', 512 * 1024 * 1024),
+                'maxSizeCeiling' => Bytes::parse(config('content-security.files.max_size_ceiling', 512 * 1024 * 1024)),
                 'forbiddenExtensions' => array_values((array) config('content-security.files.forbidden_extensions', [])),
             ],
             'archives' => (array) config('content-security.archives', []),

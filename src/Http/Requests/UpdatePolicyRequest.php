@@ -7,6 +7,7 @@ namespace LaravelPlus\ContentSecurity\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
+use LaravelPlus\ContentSecurity\Support\Bytes;
 
 /**
  * The validation on this request is a security control, not a convenience.
@@ -31,7 +32,7 @@ final class UpdatePolicyRequest extends FormRequest
      */
     public function rules(): array
     {
-        $ceiling = (int) config('content-security.files.max_size_ceiling', 512 * 1024 * 1024);
+        $ceiling = Bytes::parse(config('content-security.files.max_size_ceiling', 512 * 1024 * 1024));
 
         return [
             'type' => ['required', Rule::in(['file', 'text'])],
