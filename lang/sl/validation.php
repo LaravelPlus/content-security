@@ -12,6 +12,12 @@ return [
     'failed_content' => 'Varnostnega preverjanja vsebine ni bilo mogoče dokončati. Poskusite znova.',
 
     'upload_failed' => 'Nalaganje se ni dokončalo. Poskusite znova.',
+
+    // Size and count limits are not probes: telling the user the limit is
+    // what lets them fix the upload.
+    'too_large' => 'Datoteka je prevelika. Največja dovoljena velikost je :max.',
+    'too_many_files' => 'Preveč datotek. Največ jih je lahko :max.',
+    'batch_too_large' => 'Datoteke so skupaj prevelike. Največja dovoljena skupna velikost je :max.',
     'malware_detected' => 'Ta datoteka ni prestala varnostnega preverjanja.',
 
     'url_invalid' => 'To ni videti kot veljaven spletni naslov.',

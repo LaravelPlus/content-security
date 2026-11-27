@@ -6,6 +6,7 @@ namespace LaravelPlus\ContentSecurity\Domain\Policy;
 
 use Illuminate\Support\Str;
 use LaravelPlus\ContentSecurity\Exceptions\PolicyNotFoundException;
+use LaravelPlus\ContentSecurity\Support\Bytes;
 
 /**
  * What a given upload slot will accept. Allowlist-shaped: an extension or
@@ -35,9 +36,15 @@ final readonly class FilePolicy implements SecurityPolicy
         public array $forbiddenExtensions = [],
         public bool $allowTrailingData = false,
         public FindingRules $findings = new FindingRules,
+        public ?int $maxFiles = null,
+        public ?int $maxTotalSize = null,
     ) {}
 
     /**
+     * `max_size` and `max_total_size` take bytes or a human size ("10 MB");
+     * `max_files` / `max_total_size` bound a multi-file field and are
+     * unlimited when unset.
+     *
      * @param  array<string, mixed>  $config
      * @param  list<string>  $forbiddenExtensions
      */
@@ -64,7 +71,7 @@ final readonly class FilePolicy implements SecurityPolicy
         return new self(
             name: $name,
             label: (string) ($config['label'] ?? Str::headline($name)),
-            maxSize: (int) ($config['max_size'] ?? 10 * 1024 * 1024),
+            maxSize: Bytes::parse($config['max_size'] ?? 10 * 1024 * 1024),
             extensions: $extensions,
             mimeTypes: $mimeTypes,
             checks: $checks,
@@ -78,6 +85,8 @@ final readonly class FilePolicy implements SecurityPolicy
                 (array) config('content-security.findings', []),
                 (array) ($config['findings'] ?? []),
             ),
+            maxFiles: isset($config['max_files']) ? max(1, (int) $config['max_files']) : null,
+            maxTotalSize: isset($config['max_total_size']) ? Bytes::parse($config['max_total_size']) : null,
         );
     }
 
@@ -118,7 +127,7 @@ final readonly class FilePolicy implements SecurityPolicy
      * @param  list<string>  $extensions
      * @param  array<string, mixed>  $overrides
      */
-    public static function custom(array $extensions, int $maxSize, array $overrides = []): self
+    public static function custom(array $extensions, int|string $maxSize, array $overrides = []): self
     {
         /** @var list<string> $forbidden */
         $forbidden = (array) config('content-security.files.forbidden_extensions', []);
@@ -199,6 +208,8 @@ final readonly class FilePolicy implements SecurityPolicy
             'label' => $this->label,
             'type' => 'file',
             'max_size' => $this->maxSize,
+            'max_files' => $this->maxFiles,
+            'max_total_size' => $this->maxTotalSize,
             'extensions' => $this->extensions,
             'mime_types' => $this->mimeTypes,
             'checks' => $this->checks,

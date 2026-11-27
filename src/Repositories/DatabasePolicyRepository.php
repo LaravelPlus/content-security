@@ -11,6 +11,7 @@ use LaravelPlus\ContentSecurity\Domain\Policy\TextPolicy;
 use LaravelPlus\ContentSecurity\Events\PolicyChanged;
 use LaravelPlus\ContentSecurity\Exceptions\PolicyNotFoundException;
 use LaravelPlus\ContentSecurity\Models\SecurityPolicySetting;
+use LaravelPlus\ContentSecurity\Support\Bytes;
 use Throwable;
 
 /**
@@ -60,8 +61,8 @@ final readonly class DatabasePolicyRepository implements PolicyRepository
         if ($override !== []) {
             $config = $this->merge($config, $override, self::FILE_KEYS);
             $config['max_size'] = min(
-                (int) $config['max_size'],
-                (int) config('content-security.files.max_size_ceiling', 512 * 1024 * 1024),
+                Bytes::parse($config['max_size'] ?? 10 * 1024 * 1024),
+                Bytes::parse(config('content-security.files.max_size_ceiling', 512 * 1024 * 1024)),
             );
         }
 

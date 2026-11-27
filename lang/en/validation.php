@@ -15,6 +15,12 @@ return [
     'failed_content' => 'This content could not be security checked. Please try again.',
 
     'upload_failed' => 'The upload did not complete. Please try again.',
+
+    // Size and count limits are not probes: telling the user the limit is
+    // what lets them fix the upload.
+    'too_large' => 'This file is too large. The maximum is :max.',
+    'too_many_files' => 'Too many files. The maximum is :max.',
+    'batch_too_large' => 'These files are too large together. The maximum is :max.',
     'malware_detected' => 'This file did not pass a security check.',
 
     'url_invalid' => 'This does not look like a valid web address.',
