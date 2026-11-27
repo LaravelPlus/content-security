@@ -1,6 +1,11 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Notifications\AnonymousNotifiable;
+use LaravelPlus\ContentSecurity\Models\SecurityScan;
+use LaravelPlus\ContentSecurity\Notifications\SecurityDigest;
+use LaravelPlus\ContentSecurity\Reports\SecurityReport;
+use LaravelPlus\ContentSecurity\Support\ScannerHealth;
 
 it('renders the digest mail view without a missing mail:: hint path error', function (): void {
     // No Mail::fake(): the bug only reproduces when the view actually
@@ -18,7 +23,7 @@ it('renders the digest mail view without a missing mail:: hint path error', func
 });
 
 it('lists the concrete failed scan and carries the verdict in the subject', function (): void {
-    \LaravelPlus\ContentSecurity\Models\SecurityScan::query()->create([
+    SecurityScan::query()->create([
         'scan_id' => 'test-1',
         'type' => 'file',
         'status' => 'failed',
@@ -29,11 +34,11 @@ it('lists the concrete failed scan and carries the verdict in the subject', func
         'created_at' => now()->subDay(),
     ]);
 
-    $report = \LaravelPlus\ContentSecurity\Reports\SecurityReport::build(
+    $report = SecurityReport::build(
         'daily', now()->subDays(2)->toImmutable(), now()->toImmutable(),
     );
-    $mail = (new \LaravelPlus\ContentSecurity\Notifications\SecurityDigest($report))
-        ->toMail(new \Illuminate\Notifications\AnonymousNotifiable);
+    $mail = (new SecurityDigest($report))
+        ->toMail(new AnonymousNotifiable);
     $html = (string) $mail->render();
 
     expect($report->worthSending())->toBeTrue()
@@ -43,19 +48,19 @@ it('lists the concrete failed scan and carries the verdict in the subject', func
 });
 
 it('skips a daily report with only suspicious scans but keeps the weekly', function (): void {
-    \LaravelPlus\ContentSecurity\Models\SecurityScan::query()->create([
+    SecurityScan::query()->create([
         'scan_id' => 'test-2', 'type' => 'file', 'status' => 'suspicious', 'created_at' => now()->subDay(),
     ]);
 
-    $daily = \LaravelPlus\ContentSecurity\Reports\SecurityReport::build('daily', now()->subDays(2)->toImmutable(), now()->toImmutable());
-    $weekly = \LaravelPlus\ContentSecurity\Reports\SecurityReport::build('weekly', now()->subDays(2)->toImmutable(), now()->toImmutable());
+    $daily = SecurityReport::build('daily', now()->subDays(2)->toImmutable(), now()->toImmutable());
+    $weekly = SecurityReport::build('weekly', now()->subDays(2)->toImmutable(), now()->toImmutable());
 
     expect($daily->worthSending())->toBeFalse()->and($weekly->worthSending())->toBeTrue();
 });
 
 it('treats an offline active scanner as news only while scanning is enabled', function (): void {
-    $offline = [\LaravelPlus\ContentSecurity\Support\ScannerHealth::offline('clamav', 'clamd did not answer PING.')->asActive()];
-    $build = fn () => \LaravelPlus\ContentSecurity\Reports\SecurityReport::build(
+    $offline = [ScannerHealth::offline('clamav', 'clamd did not answer PING.')->asActive()];
+    $build = fn () => SecurityReport::build(
         'daily', now()->subDays(2)->toImmutable(), now()->toImmutable(), $offline,
     );
 

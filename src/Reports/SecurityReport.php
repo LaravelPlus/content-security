@@ -88,23 +88,22 @@ final readonly class SecurityReport
         $incidentsTotal = (clone $bad)->count();
 
         // Worst first (the enum's own severity), newest first within a status.
-        $incidents = $bad->with('threats')
+        $incidents = array_values($bad->with('threats')
             ->latest('created_at')
             ->limit(200)
             ->get()
             ->sortByDesc(static fn (SecurityScan $scan): int => $scan->status->severity())
             ->take(10)
             ->map(static fn (SecurityScan $scan): array => [
-                'at' => CarbonImmutable::instance($scan->created_at),
+                'at' => $scan->created_at?->toImmutable() ?? CarbonImmutable::now(),
                 'status' => $scan->status->value,
                 'subject' => $scan->original_filename ?? $scan->type->value,
                 'policy' => $scan->policy,
                 'user' => $scan->user_id,
-                'threats' => $scan->threats->pluck('name')->unique()->values()->all(),
+                'threats' => array_values(array_unique($scan->threats->map(static fn (SecurityThreat $threat): string => $threat->name)->all())),
                 'error' => is_string($scan->metadata['error'] ?? null) ? $scan->metadata['error'] : null,
             ])
-            ->values()
-            ->all();
+            ->all());
 
         return new self(
             period: $period,

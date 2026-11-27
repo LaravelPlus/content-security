@@ -191,7 +191,7 @@ final class DashboardController extends Controller
             $top[] = ['label' => 'Other', 'value' => $rest];
         }
 
-        return $top;
+        return array_values($top);
     }
 
     /**

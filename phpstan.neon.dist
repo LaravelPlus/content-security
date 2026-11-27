@@ -14,3 +14,12 @@ parameters:
         - vendor/larastan/larastan/bootstrap.php
 
     treatPhpDocTypesAsCertain: false
+
+    ignoreErrors:
+        # The view lives under the package's own `content-security::`
+        # namespace, registered at boot, so Larastan cannot prove it is a
+        # view-string. Scoped to the one call.
+        -
+            identifier: argument.type
+            message: '#expects view-string, string given#'
+            path: src/Notifications/SecurityDigest.php

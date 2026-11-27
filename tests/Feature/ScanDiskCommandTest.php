@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Storage;
 use LaravelPlus\ContentSecurity\Contracts\MalwareScanner;
-use LaravelPlus\ContentSecurity\Models\SecurityScan;
 use LaravelPlus\ContentSecurity\Facades\ContentSecurity;
+use LaravelPlus\ContentSecurity\Models\SecurityScan;
 use LaravelPlus\ContentSecurity\Tests\Support\FakeMalwareScanner;
 
 /**
