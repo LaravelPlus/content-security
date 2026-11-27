@@ -14,19 +14,17 @@ jobs:
       matrix:
         # 8.5 is the LaravelPlus minimum (composer.json). Newer stable PHP
         # releases are added here as they ship, without raising the floor.
-        php: ['8.5']
+        php: ['8.5', '8.6']
         laravel: ['13.*']
         stability: [prefer-lowest, prefer-stable]
-        experimental: [false]
-        # PHP 8.6 is non-blocking until the dev toolchain installs on it:
-        # the only paratest allowing 8.6 needs PHPUnit 13, and Pest 4 pins
-        # PHPUnit 12. Runtime dependencies already allow 8.6. Make these
-        # blocking once they go green.
         include:
-          - { php: '8.6', laravel: '13.*', stability: prefer-lowest, experimental: true }
-          - { php: '8.6', laravel: '13.*', stability: prefer-stable, experimental: true }
-
-    continue-on-error: ${{ matrix.experimental }}
+          # The only paratest (via Pest 4) that installs on 8.6 needs
+          # PHPUnit 13, which Pest 4 does not allow, so the dev toolchain
+          # is installed past its PHP upper bound. Runtime dependencies
+          # already allow 8.6 (`composer why-not php 8.6.0` names only
+          # brianium/paratest). Drop the flag once Pest supports 8.6.
+          - php: '8.6'
+            composer-flags: '--ignore-platform-req=php+'
 
     name: PHP ${{ matrix.php }} · Laravel ${{ matrix.laravel }} · ${{ matrix.stability }}
 
@@ -45,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
-          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction ${{ matrix.composer-flags }}
 
       # The suite must pass with no ClamAV on the machine — every test that
       # needs an engine uses FakeMalwareScanner.
