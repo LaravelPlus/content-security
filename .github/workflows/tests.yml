@@ -14,9 +14,19 @@ jobs:
       matrix:
         # 8.5 is the LaravelPlus minimum (composer.json). Newer stable PHP
         # releases are added here as they ship, without raising the floor.
-        php: ['8.5', '8.6']
+        php: ['8.5']
         laravel: ['13.*']
         stability: [prefer-lowest, prefer-stable]
+        experimental: [false]
+        # PHP 8.6 is non-blocking until the dev toolchain installs on it:
+        # the only paratest allowing 8.6 needs PHPUnit 13, and Pest 4 pins
+        # PHPUnit 12. Runtime dependencies already allow 8.6. Make these
+        # blocking once they go green.
+        include:
+          - { php: '8.6', laravel: '13.*', stability: prefer-lowest, experimental: true }
+          - { php: '8.6', laravel: '13.*', stability: prefer-stable, experimental: true }
+
+    continue-on-error: ${{ matrix.experimental }}
 
     name: PHP ${{ matrix.php }} · Laravel ${{ matrix.laravel }} · ${{ matrix.stability }}
 
