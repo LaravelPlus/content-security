@@ -9,11 +9,7 @@ use LaravelPlus\ContentSecurity\Domain\File\FileReference;
 use LaravelPlus\ContentSecurity\Domain\Scan\Findings;
 use LaravelPlus\ContentSecurity\Domain\Scan\Threat;
 use LaravelPlus\ContentSecurity\Domain\Scan\ThreatLevel;
-use PharData;
-use PharException;
-use PharFileInfo;
-use RecursiveIteratorIterator;
-use UnexpectedValueException;
+use Throwable;
 use ZipArchive;
 
 /**
@@ -41,7 +37,7 @@ final class ArchiveInspector implements ArchiveInspectorContract
 
         $threats = $format === 'zip'
             ? $this->inspectZip($file->path, $state, 1, $file->originalName)
-            : $this->inspectPhar($file->path, $state, $file->originalName);
+            : $this->inspectTar($file, $format === 'gz', $state);
 
         return Findings::of($threats, [
             'archive' => true,
@@ -210,25 +206,87 @@ final class ArchiveInspector implements ArchiveInspectorContract
     }
 
     /**
+     * Reads tar headers block by block, through zlib for .tar.gz (#5).
+     *
+     * PharData refused the extensionless upload temp path, and when it did
+     * open a .tar.gz it inflated the whole stream before any limit applied.
+     * Here every entry is counted from its header first and the loop stops
+     * once a limit is past, so a gzip bomb is inflated at most up to
+     * `max_uncompressed_size`. A stream that is not a valid tar is
+     * unreadable, never clean.
+     *
      * @return list<Threat>
      */
-    private function inspectPhar(string $path, ArchiveScanState $state, string $label): array
+    private function inspectTar(FileReference $file, bool $gzipped, ArchiveScanState $state): array
     {
+        $label = $file->originalName;
         $threats = [];
         $state->seeDepth(1);
 
-        try {
-            $archive = new PharData($path);
+        if ($gzipped) {
+            // The ratio is whole-archive for a gzip stream: inflated entries over the file on disk.
+            $state->compressedSize = $file->size();
+        }
 
-            /** @var PharFileInfo $entry */
-            foreach (new RecursiveIteratorIterator($archive) as $entry) {
-                $name = str_replace('phar://'.$path.'/', '', $entry->getPathname());
-                $size = (int) $entry->getSize();
-                $compressed = (int) $entry->getCompressedSize();
-                $state->addFile($size, $compressed > 0 ? $compressed : $size);
+        $handle = @fopen(($gzipped ? 'compress.zlib://' : '').$file->path, 'rb');
+
+        if (! is_resource($handle)) {
+            return [$this->unreadable($label, 'it could not be opened')];
+        }
+
+        try {
+            $longName = null;
+
+            while (true) {
+                $header = $this->readExactly($handle, 512);
+
+                if ($header === null) {
+                    return [...$threats, $this->unreadable($label, 'it ends before the end-of-archive marker')];
+                }
+
+                if ($header === str_repeat("\0", 512)) {
+                    break;
+                }
+
+                if (! $this->validTarHeader($header)) {
+                    return [...$threats, $this->unreadable($label, 'it is not a valid tar archive')];
+                }
+
+                $size = $this->tarSize($header);
+                $type = $header[156];
+
+                // GNU long names and PAX headers carry the next entry's real name as data.
+                if ($type === 'L' || $type === 'x') {
+                    $data = $size <= 65536 ? $this->readExactly($handle, $size) : null;
+
+                    if ($data === null || ! $this->skip($handle, (512 - $size % 512) % 512)) {
+                        return [...$threats, $this->unreadable($label, 'an extended header is malformed')];
+                    }
+
+                    $longName = $type === 'L' ? rtrim($data, "\0") : $this->paxPath($data) ?? $longName;
+
+                    continue;
+                }
+
+                $name = $longName ?? $this->tarName($header);
+                $longName = null;
+
+                // Every entry with data counts, whatever its type: skipping it
+                // still inflates it, so it must be bounded like a file.
+                if ($type !== '5' || $size > 0) {
+                    $state->addFile($size, $gzipped ? 0 : $size);
+                }
 
                 foreach ($this->inspectEntryName($name, $label) as $threat) {
                     $threats[] = $threat;
+                }
+
+                // A hard or symbolic link to an absolute or parent path writes
+                // outside the target on extraction just like a ../ name does.
+                if ($type === '1' || $type === '2') {
+                    foreach ($this->inspectEntryName(rtrim(substr($header, 157, 100), "\0"), $label) as $threat) {
+                        $threats[] = $threat;
+                    }
                 }
 
                 foreach ($state->breaches() as $threat) {
@@ -236,19 +294,108 @@ final class ArchiveInspector implements ArchiveInspectorContract
                 }
 
                 if ($state->exhausted()) {
+                    // Stop before inflating the entry that crossed the limit.
                     break;
                 }
+
+                if (! $this->skip($handle, (int) (ceil($size / 512) * 512))) {
+                    return [...$threats, $this->unreadable($label, 'an entry is truncated')];
+                }
             }
-        } catch (UnexpectedValueException|PharException $e) {
-            $threats[] = Threat::make(
-                name: 'archive.unreadable',
-                level: ThreatLevel::Medium,
-                source: 'archive',
-                description: sprintf('The archive [%s] could not be read: %s', $label, $e->getMessage()),
-            );
+        } catch (Throwable $e) {
+            return [...$threats, $this->unreadable($label, $e->getMessage())];
+        } finally {
+            fclose($handle);
         }
 
         return $threats;
+    }
+
+    /** @param resource $handle */
+    private function readExactly($handle, int $bytes): ?string
+    {
+        $data = '';
+
+        while (strlen($data) < $bytes) {
+            $chunk = fread($handle, max(1, min(65536, $bytes - strlen($data))));
+
+            if ($chunk === false || $chunk === '') {
+                return null;
+            }
+
+            $data .= $chunk;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Reads past entry data instead of seeking, so a gzip stream is inflated
+     * only as far as entries already counted against the limits.
+     *
+     * @param  resource  $handle
+     */
+    private function skip($handle, int $bytes): bool
+    {
+        while ($bytes > 0) {
+            $chunk = $this->readExactly($handle, min(65536, $bytes));
+
+            if ($chunk === null) {
+                return false;
+            }
+
+            $bytes -= strlen($chunk);
+        }
+
+        return true;
+    }
+
+    private function validTarHeader(string $header): bool
+    {
+        $stored = trim(substr($header, 148, 8), "\0 ");
+
+        if ($stored === '' || preg_match('/^[0-7]+$/', $stored) !== 1) {
+            return false;
+        }
+
+        // The checksum is the byte sum of the header with its own field read as spaces.
+        return array_sum(unpack('C*', substr_replace($header, str_repeat(' ', 8), 148, 8)) ?: []) === octdec($stored);
+    }
+
+    private function tarSize(string $header): int
+    {
+        $field = substr($header, 124, 12);
+
+        // GNU base-256 sizes (high bit set) mean an entry of 8 GiB or more.
+        if ((ord($field[0]) & 0x80) !== 0) {
+            return PHP_INT_MAX;
+        }
+
+        return (int) octdec(trim($field, "\0 ") ?: '0');
+    }
+
+    private function tarName(string $header): string
+    {
+        $name = rtrim(substr($header, 0, 100), "\0");
+        $prefix = substr($header, 257, 5) === 'ustar' ? rtrim(substr($header, 345, 155), "\0") : '';
+
+        return $prefix === '' ? $name : $prefix.'/'.$name;
+    }
+
+    private function paxPath(string $data): ?string
+    {
+        // Records are "<length> <key>=<value>\n".
+        return preg_match('/(?:^|\n)\d+ path=([^\n]*)\n/', $data, $match) === 1 ? $match[1] : null;
+    }
+
+    private function unreadable(string $label, string $reason): Threat
+    {
+        return Threat::make(
+            name: 'archive.unreadable',
+            level: ThreatLevel::Medium,
+            source: 'archive',
+            description: sprintf('The archive [%s] could not be read: %s.', $label, $reason),
+        );
     }
 
     /**
