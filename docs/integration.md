@@ -153,7 +153,7 @@ Common surprises, all of them legitimate findings:
 | `file.mime_extension_mismatch` | A `.doc` that is really an RTF, or a `.jpg` that is really a PNG. Widen the policy or fix the upload path. |
 | `pdf.no_eof_marker` | A truncated PDF, often from a broken export. |
 | `pdf.javascript` | Interactive forms. Common in real documents — decide deliberately. |
-| `file.multiple_extensions` | `report.final.pdf`. Low severity; still worth seeing. |
+| `file.multiple_extensions` | `invoice.pdf.zip`: a known extension before the real one. Versions and dates (`CV.2026.final.pdf`) do not count. Low severity. |
 | `archive.executable_entry` | Someone zipped an installer. |
 
 ## 7. Add the engine

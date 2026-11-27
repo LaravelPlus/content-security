@@ -186,7 +186,14 @@ return [
         'allow_relative_links' => true,
         'allow_relative_medias' => true,
 
-        // Dropped outright: no <iframe> in default policy.
+        // Host allowlists, each independent of the others. null = any
+        // host (schemes above still apply); [] = no absolute URLs at all.
+        'allowed_link_hosts' => null,   // <a href>
+        'allowed_media_hosts' => null,  // <img src> and other media
+
+        // <iframe src> only. Empty = no <iframe> at all (the default).
+        // Symfony also runs iframe src through allowed_media_hosts, so when
+        // that list is set an embed host must appear on both.
         'allowed_iframe_hosts' => [],
 
         // Rewritten onto every link that leaves the site.

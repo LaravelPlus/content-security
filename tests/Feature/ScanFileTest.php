@@ -213,3 +213,30 @@ it('passes a phone camera trailer at Info when the policy allows trailing data',
         ->and($trailer)->not->toBeNull()
         ->and($trailer->level)->toBe(ThreatLevel::Info);
 });
+
+it('does not flag ordinary dotted filenames as multiple extensions', function (string $name): void {
+    useScanner(FakeMalwareScanner::clean());
+
+    $result = ContentSecurity::scanFile(textFile($name, 'perfectly ordinary'));
+
+    expect(array_map(fn ($threat) => $threat->name, $result->threats()))
+        ->not->toContain('file.multiple_extensions');
+})->with(['CV.2026.final.txt', 'Resume v2.1.txt', 'report.2026-11-27.txt', 'notes.v2.txt', 'photo.256.txt']);
+
+it('flags a known extension disguised before the real one', function (string $name): void {
+    useScanner(FakeMalwareScanner::clean());
+
+    $result = ContentSecurity::scanFile(textFile($name, 'perfectly ordinary'));
+
+    expect(array_map(fn ($threat) => $threat->name, $result->threats()))
+        ->toContain('file.multiple_extensions');
+})->with(['invoice.pdf.txt', 'photo.JPG.txt', 'archive.zip.txt']);
+
+it('still treats an executable segment anywhere in the name as critical', function (): void {
+    useScanner(FakeMalwareScanner::clean());
+
+    $result = ContentSecurity::scanFile(textFile('CV.2026.php.txt', 'plain text'));
+
+    expect(array_map(fn ($threat) => $threat->name, $result->threats()))
+        ->toContain('file.executable_extension');
+});

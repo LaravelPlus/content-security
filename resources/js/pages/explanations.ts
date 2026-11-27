@@ -26,7 +26,7 @@ export const checkExplanations: Record<string, string> = {
 /** Kaj pomeni posamezna najdba, po imenu podpisa. */
 export const threatExplanations: Record<string, string> = {
     'file.multiple_extensions':
-        'The name carries more than one extension (invoice.pdf.exe). Also matches our own derived names, such as photo.256.webp.',
+        'A recognised file extension appears before the real one (invoice.pdf.zip, photo.jpg.html). Versions and dates in a name (CV.2026.final.pdf) do not trigger it.',
     'file.embedded_php':
         'PHP code was found inside a file that should hold none.',
     'file.embedded_script':
