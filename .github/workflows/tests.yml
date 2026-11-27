@@ -12,7 +12,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.5']
+        # 8.5 is the LaravelPlus minimum (composer.json). Newer stable PHP
+        # releases are added here as they ship, without raising the floor.
+        php: ['8.5', '8.6']
         laravel: ['13.*']
         stability: [prefer-lowest, prefer-stable]
 

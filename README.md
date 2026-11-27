@@ -67,7 +67,7 @@ objected — not that the file is harmless.
 
 ## Requirements
 
-- PHP 8.5+
+- PHP 8.5+ (the LaravelPlus minimum; CI also runs the newest stable PHP)
 - Laravel 13
 - `ext-fileinfo` (required), `ext-zip` (archives), `ext-gd` (images)
 - ClamAV `clamd` for malware scanning — optional but strongly recommended
