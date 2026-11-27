@@ -27,6 +27,7 @@ use LaravelPlus\ContentSecurity\Contracts\ScanRepository;
 use LaravelPlus\ContentSecurity\Contracts\TextCheck;
 use LaravelPlus\ContentSecurity\Contracts\TextInspector;
 use LaravelPlus\ContentSecurity\Contracts\UrlInspector;
+use LaravelPlus\ContentSecurity\Events\ScanCompleted;
 use LaravelPlus\ContentSecurity\File\Archives\ArchiveInspector;
 use LaravelPlus\ContentSecurity\File\Archives\ArchiveLimits;
 use LaravelPlus\ContentSecurity\File\Checks\ArchiveCheck;
@@ -42,6 +43,7 @@ use LaravelPlus\ContentSecurity\File\Malware\MalwareScannerManager;
 use LaravelPlus\ContentSecurity\File\Pdf\PdfInspector;
 use LaravelPlus\ContentSecurity\Listeners\LogSecurityEvent;
 use LaravelPlus\ContentSecurity\Listeners\ScanOutgoingMail;
+use LaravelPlus\ContentSecurity\Listeners\SendFindingAlerts;
 use LaravelPlus\ContentSecurity\Pipeline\CheckRegistry;
 use LaravelPlus\ContentSecurity\Pipeline\PipelineRunner;
 use LaravelPlus\ContentSecurity\Repositories\ConfigPolicyRepository;
@@ -122,6 +124,7 @@ final class ContentSecurityServiceProvider extends ServiceProvider
         $this->registerSchedule();
 
         $this->app->make('events')->subscribe(LogSecurityEvent::class);
+        $this->app->make('events')->listen(ScanCompleted::class, SendFindingAlerts::class);
         // Always registered; it checks `mail.scan_outbound` itself, so the
         // switch works at runtime and not only at boot.
         $this->app->make('events')->listen(MessageSending::class, ScanOutgoingMail::class);
