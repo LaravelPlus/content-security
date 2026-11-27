@@ -115,6 +115,8 @@ final readonly class LogSecurityEvent
             'target_disk' => $event->targetDisk,
             'actor_id' => $event->actorId,
             'override' => $event->overridden,
+            'reason' => $event->reason,
+            'scan_status' => $event->scanStatus?->value,
         ]);
     }
 

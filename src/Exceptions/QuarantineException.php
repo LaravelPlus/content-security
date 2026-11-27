@@ -21,6 +21,11 @@ final class QuarantineException extends ContentSecurityException
         return new self(sprintf('Scan [%s] cannot be released: the most recent scan is not clean.', $scanId));
     }
 
+    public static function overrideRequiresReason(string $scanId): self
+    {
+        return new self(sprintf('Scan [%s] cannot be released with an override without a reason.', $scanId));
+    }
+
     public static function missingFile(string $path): self
     {
         return new self(sprintf('The quarantined file [%s] is no longer on the quarantine disk.', $path));
