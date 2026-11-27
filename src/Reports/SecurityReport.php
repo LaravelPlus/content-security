@@ -67,6 +67,8 @@ final readonly class SecurityReport
         /** @var list<array{name: string, level: string, occurrences: int}> $topThreats */
         $topThreats = SecurityThreat::query()
             ->whereBetween('created_at', [$from, $to])
+            // `notify: none` findings stay in the audit trail, not the mail.
+            ->where(static fn ($query) => $query->whereNull('metadata->notify')->orWhere('metadata->notify', '!=', 'none'))
             ->selectRaw('name, level, count(*) as occurrences')
             ->groupBy('name', 'level')
             ->orderByDesc('occurrences')
@@ -92,6 +94,9 @@ final readonly class SecurityReport
             ->latest('created_at')
             ->limit(200)
             ->get()
+            ->reject(static fn (SecurityScan $scan): bool => $scan->threats->isNotEmpty() && $scan->threats->every(
+                static fn (SecurityThreat $threat): bool => ($threat->metadata['notify'] ?? null) === 'none',
+            ))
             ->sortByDesc(static fn (SecurityScan $scan): int => $scan->status->severity())
             ->take(10)
             ->map(static fn (SecurityScan $scan): array => [

@@ -34,6 +34,7 @@ final readonly class FilePolicy implements SecurityPolicy
         public FailureAction $onThreat = FailureAction::Quarantine,
         public array $forbiddenExtensions = [],
         public bool $allowTrailingData = false,
+        public FindingRules $findings = new FindingRules,
     ) {}
 
     /**
@@ -73,6 +74,10 @@ final readonly class FilePolicy implements SecurityPolicy
                 $forbiddenExtensions,
             )),
             allowTrailingData: (bool) ($config['allow_trailing_data'] ?? false),
+            findings: FindingRules::fromConfig(
+                (array) config('content-security.findings', []),
+                (array) ($config['findings'] ?? []),
+            ),
         );
     }
 

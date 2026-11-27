@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Notification;
 use LaravelPlus\ContentSecurity\ContentSecurity;
 use LaravelPlus\ContentSecurity\Notifications\SecurityDigest;
 use LaravelPlus\ContentSecurity\Reports\SecurityReport;
+use LaravelPlus\ContentSecurity\Support\ReportRecipients;
 
 /**
  * Daily and weekly digests.
@@ -95,14 +96,7 @@ final class ReportCommand extends Command
             return array_values(array_filter($option));
         }
 
-        /** @var list<string>|string|null $configured */
-        $configured = config('content-security.reports.recipients');
-
-        if (is_string($configured)) {
-            $configured = array_map(trim(...), explode(',', $configured));
-        }
-
-        return array_values(array_filter((array) $configured));
+        return ReportRecipients::configured();
     }
 
     private function preview(SecurityReport $report): void

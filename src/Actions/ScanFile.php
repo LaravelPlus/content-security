@@ -79,7 +79,7 @@ final readonly class ScanFile
 
         $result = $this->hooks->runAfter($result, $context);
 
-        if ($quarantineOnThreat && $this->shouldQuarantine($result, $policy->onThreat)) {
+        if ($quarantineOnThreat && $this->shouldQuarantine($result, $policy->findings->onThreat($result->threats(), $policy->onThreat))) {
             $result = $this->quarantineFile($file, $context->scanId, $result);
         }
 

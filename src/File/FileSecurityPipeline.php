@@ -82,7 +82,7 @@ final class FileSecurityPipeline
 
         return ScanResult::fromChecks(
             context: $context,
-            checks: $results,
+            checks: $policy->findings->apply($results),
             scanner: 'file-pipeline',
             durationMs: (microtime(true) - $startedAt) * 1000,
             metadata: [

@@ -122,6 +122,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Per-finding rules (file scans)
+    |--------------------------------------------------------------------------
+    | Keyed by finding code. Empty = every finding keeps its severity default
+    | (High/Critical block; Low/Medium are suspicious and block; Info only
+    | records) and goes to the digest. A file policy may carry its own
+    | `findings` array, which wins per code over this one.
+    |
+    |   action: allow      recorded and reported, does not block
+    |           reject     blocks and discards, whatever on_threat says
+    |           quarantine blocks and keeps the file, whatever on_threat says
+    |   notify: none       audit trail only, left out of the digest
+    |           digest     daily/weekly digest (default)
+    |           immediate  also mailed to reports.recipients right away
+    |
+    | Several findings resolve to the strongest action (quarantine > reject).
+    | Unknown codes, actions or modes throw. Executable content, the size
+    | ceiling and archive/image resource bounds cannot be set to `allow`, and
+    | malware signatures and failed scans are never affected by these rules.
+    |
+    | 'file.multiple_extensions' => ['action' => 'allow', 'notify' => 'digest'],
+    */
+
+    'findings' => [],
+
+    /*
+    |--------------------------------------------------------------------------
     | Text policies
     |--------------------------------------------------------------------------
     */
